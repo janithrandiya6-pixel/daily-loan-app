@@ -3,16 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoanPro - Analytics & Expenses</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>LoanPro - Analytics & Investments</title>
   <style>
-    body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .sidebar { background-color: #1a1a1a !important; border-right: 1px solid #333; min-height: 100vh; }
-    .card { background-color: #1e1e1e; border: 1px solid #333; }
-    .table { color: #e0e0e0; }
-    .modal-content { background-color: #1e1e1e; color: #e0e0e0; border: 1px solid #444; }
-    .nav-link.active { background-color: #2c2c2c; color: #fff !important; border-radius: 5px; }
+    :root { color-scheme: light; }
+  </style>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Font - Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #0f172a;
+      --accent-color: #2563eb;
+      --success-color: #16a34a;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    body {
+      background-color: var(--bg-color) !important;
+      color: var(--text-main) !important;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Sidebar Styling */
+    .sidebar {
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+      color: #ffffff;
+      min-height: 100vh;
+      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.05);
+    }
+    .sidebar h3 {
+      color: #ffffff !important;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .sidebar .nav-link {
+      color: #94a3b8 !important;
+      font-weight: 500;
+      border-radius: 8px;
+      margin-bottom: 5px;
+      transition: all 0.3s ease;
+    }
+    .sidebar .nav-link:hover {
+      color: #ffffff !important;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+    .sidebar .nav-link.active {
+      background-color: var(--accent-color) !important;
+      color: #ffffff !important;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Modern Card Styling */
+    .card {
+      background-color: var(--card-bg) !important;
+      color: var(--text-main) !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+    }
+    
+    .table { color: var(--text-main) !important; }
+    .table thead { background-color: #f1f5f9 !important; color: #334155 !important; }
+    .table thead th {
+      border-bottom: 2px solid #e2e8f0;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      color: #475569 !important;
+    }
+
+    .form-control, .form-select {
+      background-color: #ffffff !important;
+      color: var(--text-main) !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+    }
+    .form-control:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
   </style>
 </head>
 <body>
@@ -21,215 +97,306 @@
     <div class="row">
       <!-- Sidebar -->
       <nav class="col-md-3 col-lg-2 d-md-block sidebar py-4 px-3">
-        <h3 class="text-white fw-bold mb-4">LoanPro</h3>
-        <ul class="nav flex-column gap-2">
-          <li class="nav-item"><a href="index.html" class="nav-link text-secondary">📊 Dashboard</a></li>
-          <li class="nav-item"><a href="analytics.html" class="nav-link text-white active">📈 Analytics & Expenses</a></li>
+        <h3 class="mb-4 fs-4">Loan<span style="color: #60a5fa;">Pro</span></h3>
+        <ul class="nav flex-column gap-1">
+          <li class="nav-item"><a href="index.html" class="nav-link py-2 px-3">📊 Dashboard</a></li>
+          <li class="nav-item"><a href="analytics.html" class="nav-link active py-2 px-3">📈 Analytics & Expenses</a></li>
         </ul>
       </nav>
 
       <!-- Main Content -->
       <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom border-secondary">
-          <h1 class="h2">Financial Analytics & Expenses</h1>
-          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#expenseModal">+ Add New Expense</button>
+        <div class="d-flex justify-content-between flex-wrap align-items-center pt-3 pb-3 mb-4 border-bottom">
+          <div>
+            <h1 class="h3 fw-bold text-dark m-0">Analytics, Capital & Expenses</h1>
+            <p class="text-muted small m-0 mt-1">Track business investments, owner/customer cash injections, and operating expenses.</p>
+          </div>
         </div>
 
-        <!-- Chart Section -->
-        <div class="row mb-4">
-          <div class="col-md-8">
-            <div class="card p-4">
-              <h5 class="mb-3">Financial Overview Chart</h5>
-              <div style="position: relative; height:300px; width:100%">
-                <canvas id="analyticsChart"></canvas>
-              </div>
+        <!-- Overview Stat Cards (Added Today's Collection, Total Collected, Total Profit) -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card p-4 border-start border-4 border-success">
+              <span class="text-muted fw-semibold small text-uppercase">Total Capital / Investments</span>
+              <h3 id="totalCapitalVal" class="fw-bold text-success mt-2 mb-0">රු. 0.00</h3>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="card p-4 h-100">
-              <h5 class="mb-3">Daily Collection Sheet</h5>
-              <div class="mb-2">
-                <input type="date" id="collectionDateInput" class="form-control bg-dark text-white border-secondary" onchange="loadDailyCollection()">
+            <div class="card p-4 border-start border-4 border-danger">
+              <span class="text-muted fw-semibold small text-uppercase">Total Expenses (වියදම්)</span>
+              <h3 id="totalExpenseVal" class="fw-bold text-danger mt-2 mb-0">රු. 0.00</h3>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-4 border-start border-4 border-primary">
+              <span class="text-muted fw-semibold small text-uppercase">Net Cash Flow</span>
+              <h3 id="netCashFlowVal" class="fw-bold text-dark mt-2 mb-0">රු. 0.00</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Collection & Profit Stats Row -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card p-4 border-start border-4 border-info">
+              <span class="text-muted fw-semibold small text-uppercase">Today's Collection (අද එකතුව)</span>
+              <h3 id="todayCollectedVal" class="fw-bold text-info mt-2 mb-0">රු. 0.00</h3>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-4 border-start border-4" style="border-color: #10b981 !important;">
+              <span class="text-muted fw-semibold small text-uppercase">Total Collected (මුළු එකතුව)</span>
+              <h3 id="totalCollectedVal" class="fw-bold text-success mt-2 mb-0">රු. 0.00</h3>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-4 border-start border-4" style="border-color: #d97706 !important;">
+              <span class="text-muted fw-semibold small text-uppercase">Total Interest / Profit (මුළු ලාභය)</span>
+              <h3 id="totalInterestVal" class="fw-bold text-warning-emphasis mt-2 mb-0">රු. 0.00</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Forms Row -->
+        <div class="row g-4 mb-4">
+          <!-- Add Capital / Investment Form -->
+          <div class="col-md-6">
+            <div class="card p-4 shadow-sm h-100">
+              <h5 class="fw-bold text-dark mb-3">➕ Add Capital / Investment (මුදල් ආයෝජනයක් එකතු කිරීම)</h5>
+              <form id="capitalForm">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Date (දිනය)</label>
+                  <input type="date" class="form-control" id="capDate" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Investor / Customer Name (නම)</label>
+                  <input type="text" class="form-control" id="capName" placeholder="උදා: නම හෝ ආයෝජකයා" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Amount (මුදල - Rs.)</label>
+                  <input type="number" class="form-control" id="capAmount" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Note / Description (විස්තරය)</label>
+                  <input type="text" class="form-control" id="capNote" placeholder="විස්තරයක් ඇත්නම්...">
+                </div>
+                <button type="submit" class="btn btn-success w-100 fw-bold py-2" style="border-radius: 8px;">Save Capital</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Add Expense Form -->
+          <div class="col-md-6">
+            <div class="card p-4 shadow-sm h-100">
+              <h5 class="fw-bold text-dark mb-3">➖ Add Expense (වියදමක් එකතු කිරීම)</h5>
+              <form id="expenseForm">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Date (දිනය)</label>
+                  <input type="date" class="form-control" id="expDate" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Category / Title (වියදම් විස්තරය)</label>
+                  <input type="text" class="form-control" id="expTitle" placeholder="උදා: දුරකථන බිල්, ගමන් වියදම්" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small">Amount (මුදල - Rs.)</label>
+                  <input type="number" class="form-control" id="expAmount" step="0.01" required>
+                </div>
+                <button type="submit" class="btn btn-danger w-100 fw-bold py-2 mt-4" style="border-radius: 8px;">Save Expense</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tables Row -->
+        <div class="row g-4">
+          <!-- Capital List Table -->
+          <div class="col-md-6">
+            <div class="card p-4 shadow-sm">
+              <h5 class="fw-bold text-dark mb-3">Capital / Investments History</h5>
+              <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Name</th>
+                      <th>Amount</th>
+                      <th class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="capitalTableBody"></tbody>
+                </table>
               </div>
-              <h4 id="todayTotalVal" class="text-success mb-3">රු. 0.00</h4>
-              <div style="max-height: 180px; overflow-y: auto;" id="dailyCollectionList">
-                <small class="text-muted">No collections for this date.</small>
+            </div>
+          </div>
+
+          <!-- Expenses List Table -->
+          <div class="col-md-6">
+            <div class="card p-4 shadow-sm">
+              <h5 class="fw-bold text-dark mb-3">Expenses History</h5>
+              <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                <table class="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Title</th>
+                      <th>Amount</th>
+                      <th class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="expenseTableBody"></tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Expenses Table -->
-        <div class="card p-4">
-          <h5 class="mb-3">Expenses Record</h5>
-          <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Title</th>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="expensesTableBody"></tbody>
-            </table>
-          </div>
-        </div>
       </main>
     </div>
   </div>
 
-  <!-- Add Expense Modal -->
-  <div class="modal fade" id="expenseModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content p-3">
-        <div class="modal-header border-bottom border-secondary">
-          <h5 class="modal-title">Add New Expense</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="expenseForm">
-            <div class="mb-3">
-              <label class="form-label">Expense Title</label>
-              <input type="text" class="form-control bg-dark text-white border-secondary" id="expTitle" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Amount (Rs.)</label>
-              <input type="number" class="form-control bg-dark text-white border-secondary" id="expAmount" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Date</label>
-              <input type="date" class="form-control bg-dark text-white border-secondary" id="expDate">
-            </div>
-            <button type="submit" class="btn btn-success w-100">Save Expense</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let myChart = null;
-
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById('collectionDateInput').value = new Date().toISOString().split('T')[0];
-      document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
-      
-      loadAnalyticsData();
-      loadExpenses();
-      loadDailyCollection();
+      document.getElementById('capDate').valueAsDate = new Date();
+      document.getElementById('expDate').valueAsDate = new Date();
+      fetchAnalyticsData();
+      fetchLoanSummaryData();
 
+      // Capital Form Submit
+      document.getElementById('capitalForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          date: document.getElementById('capDate').value,
+          name: document.getElementById('capName').value,
+          amount: document.getElementById('capAmount').value,
+          note: document.getElementById('capNote').value
+        };
+        const res = await fetch('/api/capital', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+          document.getElementById('capitalForm').reset();
+          document.getElementById('capDate').valueAsDate = new Date();
+          fetchAnalyticsData();
+        }
+      });
+
+      // Expense Form Submit
       document.getElementById('expenseForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = {
+          date: document.getElementById('expDate').value,
           title: document.getElementById('expTitle').value,
-          amount: document.getElementById('expAmount').value,
-          expense_date: document.getElementById('expDate').value
+          amount: document.getElementById('expAmount').value
         };
-        
         const res = await fetch('/api/expenses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        
-        if (res.ok) {
-          const modalEl = document.getElementById('expenseModal');
-          const modal = bootstrap.Modal.getInstance(modalEl);
-          modal.hide();
-          
+        if(res.ok) {
           document.getElementById('expenseForm').reset();
-          document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
-
-          loadExpenses();
-          loadAnalyticsData();
+          document.getElementById('expDate').valueAsDate = new Date();
+          fetchAnalyticsData();
         }
       });
     });
 
-    async function loadAnalyticsData() {
+    async function fetchAnalyticsData() {
       try {
-        const res = await fetch('/api/analytics');
-        const data = await res.json();
+        // Fetch Capitals
+        const capRes = await fetch('/api/capital');
+        const capitals = await capRes.json();
+        
+        let totalCap = 0;
+        const capTable = document.getElementById('capitalTableBody');
+        capTable.innerHTML = '';
+        capitals.forEach(item => {
+          totalCap += parseFloat(item.amount || 0);
+          capTable.innerHTML += `
+            <tr>
+              <td>${item.date || '-'}</td>
+              <td class="fw-bold">${item.name}</td>
+              <td class="text-success fw-semibold">රු. ${parseFloat(item.amount).toFixed(2)}</td>
+              <td class="text-end"><button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteCapital(${item.id})">×</button></td>
+            </tr>`;
+        });
 
-        const ctx = document.getElementById('analyticsChart').getContext('2d');
-        if(myChart) myChart.destroy();
+        // Fetch Expenses
+        const expRes = await fetch('/api/expenses');
+        const expenses = await expRes.json();
 
-        myChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['Expected Total', 'Total Collected', 'Total Expenses'],
-            datasets: [{
-              label: 'Amount in Rs.',
-              data: [data.totalExpected, data.totalCollected, data.totalExpenses],
-              backgroundColor: ['#0d6efd', '#198754', '#dc3545'],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } }
+        let totalExp = 0;
+        const expTable = document.getElementById('expenseTableBody');
+        expTable.innerHTML = '';
+        expenses.forEach(item => {
+          totalExp += parseFloat(item.amount || 0);
+          expTable.innerHTML += `
+            <tr>
+              <td>${item.date || '-'}</td>
+              <td class="fw-bold">${item.title}</td>
+              <td class="text-danger fw-semibold">රු. ${parseFloat(item.amount).toFixed(2)}</td>
+              <td class="text-end"><button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteExpense(${item.id})">×</button></td>
+            </tr>`;
+        });
+
+        // Update Summary Cards
+        document.getElementById('totalCapitalVal').innerText = `රු. ${totalCap.toFixed(2)}`;
+        document.getElementById('totalExpenseVal').innerText = `රු. ${totalExp.toFixed(2)}`;
+        document.getElementById('netCashFlowVal').innerText = `රු. ${(totalCap - totalExp).toFixed(2)}`;
+
+      } catch(err) { console.error(err); }
+    }
+
+    async function fetchLoanSummaryData() {
+      try {
+        const res = await fetch('/api/loans');
+        const loans = await res.json();
+        
+        let totalCollectedSum = 0;
+        let todayCollectedSum = 0;
+        let totalInterestSum = 0;
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        loans.forEach(loan => {
+          totalCollectedSum += parseFloat(loan.paid_amount || 0);
+          totalInterestSum += parseFloat(loan.interest || 0);
+
+          if (loan.schedule) {
+            let startDate = loan.start_date ? new Date(loan.start_date) : new Date();
+            loan.schedule.forEach((day, dIdx) => {
+              let currDate = new Date(startDate);
+              currDate.setDate(startDate.getDate() + dIdx);
+              let dateStr = currDate.toISOString().split('T')[0];
+              if (dateStr === todayStr && day.status === 'Paid') {
+                todayCollectedSum += parseFloat(day.amountPaid || 0);
+              }
+            });
           }
         });
-      } catch (err) { console.error(err); }
+
+        document.getElementById('todayCollectedVal').innerText = `රු. ${todayCollectedSum.toFixed(2)}`;
+        document.getElementById('totalCollectedVal').innerText = `රු. ${totalCollectedSum.toFixed(2)}`;
+        document.getElementById('totalInterestVal').innerText = `රු. ${totalInterestSum.toFixed(2)}`;
+      } catch(err) { console.error(err); }
     }
 
-    async function loadExpenses() {
-      try {
-        const res = await fetch('/api/expenses');
-        const expenses = await res.json();
-        const tbody = document.getElementById('expensesTableBody');
-        tbody.innerHTML = '';
-        expenses.forEach((exp, idx) => {
-          tbody.innerHTML += `
-            <tr>
-              <td>${idx + 1}</td>
-              <td>${exp.title}</td>
-              <td>${exp.expense_date}</td>
-              <td>රු. ${parseFloat(exp.amount).toFixed(2)}</td>
-              <td><button class="btn btn-sm btn-outline-danger" onclick="deleteExpense(${exp.id})">Delete</button></td>
-            </tr>
-          `;
-        });
-      } catch (err) { console.error(err); }
-    }
-
-    async function deleteExpense(id) {
-      if(confirm("Delete this expense?")) {
-        await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
-        loadExpenses();
-        loadAnalyticsData();
+    async function deleteCapital(id) {
+      if(confirm("Are you sure?")) {
+        await fetch(`/api/capital/${id}`, { method: 'DELETE' });
+        fetchAnalyticsData();
       }
     }
 
-    async function loadDailyCollection() {
-      const selectedDate = document.getElementById('collectionDateInput').value;
-      try {
-        const res = await fetch(`/api/daily-collection?date=${selectedDate}`);
-        const data = await res.json();
-
-        document.getElementById('todayTotalVal').innerText = `රු. ${parseFloat(data.totalCollectedToday).toFixed(2)}`;
-        const listDiv = document.getElementById('dailyCollectionList');
-        listDiv.innerHTML = '';
-
-        if(data.collections.length === 0) {
-          listDiv.innerHTML = `<small class="text-muted">No collections found.</small>`;
-          return;
-        }
-
-        data.collections.forEach(c => {
-          listDiv.innerHTML += `
-            <div class="p-2 mb-1 bg-black rounded border border-secondary d-flex justify-content-between">
-              <span>${c.customer_name} (Day ${c.day_number})</span>
-              <strong class="text-success">රු. ${parseFloat(c.amount_paid).toFixed(2)}</strong>
-            </div>
-          `;
-        });
-      } catch (err) { console.error(err); }
+    async function deleteExpense(id) {
+      if(confirm("Are you sure?")) {
+        await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
+        fetchAnalyticsData();
+      }
     }
   </script>
 </body>

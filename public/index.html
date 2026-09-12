@@ -4,11 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LoanPro - Microfinance Management System</title>
-  <!-- Force Light Mode in Browser -->
   <style>
-    :root {
-      color-scheme: light;
-    }
+    :root { color-scheme: light; }
   </style>
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -38,11 +35,7 @@
       min-height: 100vh;
       box-shadow: 4px 0 10px rgba(0, 0, 0, 0.05);
     }
-    .sidebar h3 {
-      color: #ffffff !important;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
+    .sidebar h3 { color: #ffffff !important; font-weight: 700; letter-spacing: 0.5px; }
     .sidebar .nav-link {
       color: #94a3b8 !important;
       font-weight: 500;
@@ -50,10 +43,7 @@
       margin-bottom: 5px;
       transition: all 0.3s ease;
     }
-    .sidebar .nav-link:hover {
-      color: #ffffff !important;
-      background-color: rgba(255, 255, 255, 0.08);
-    }
+    .sidebar .nav-link:hover { color: #ffffff !important; background-color: rgba(255, 255, 255, 0.08); }
     .sidebar .nav-link.active {
       background-color: var(--accent-color) !important;
       color: #ffffff !important;
@@ -70,24 +60,17 @@
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .card:hover {
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    }
+    .card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
 
     /* Stat Card Accents */
     .stat-card-1 { border-left: 4px solid #0f172a !important; }
     .stat-card-2 { border-left: 4px solid var(--success-color) !important; }
     .stat-card-3 { border-left: 4px solid #d97706 !important; }
+    .stat-card-4 { border-left: 4px solid var(--accent-color) !important; }
 
     /* Table Styling */
-    .table {
-      color: var(--text-main) !important;
-      background-color: transparent !important;
-    }
-    .table thead {
-      background-color: #f1f5f9 !important;
-      color: #334155 !important;
-    }
+    .table { color: var(--text-main) !important; background-color: transparent !important; }
+    .table thead { background-color: #f1f5f9 !important; color: #334155 !important; }
     .table thead th {
       border-bottom: 2px solid #e2e8f0;
       font-weight: 600;
@@ -96,12 +79,10 @@
       letter-spacing: 0.05em;
       color: #475569 !important;
     }
-    .table tbody tr {
-      transition: background-color 0.2s;
-    }
-    .table tbody tr:hover {
-      background-color: #f8fafc !important;
-    }
+    .table tbody tr { transition: background-color 0.2s; }
+    .table tbody tr:hover { background-color: #f8fafc !important; }
+    .customer-link { color: var(--accent-color); text-decoration: none; font-weight: 600; cursor: pointer; }
+    .customer-link:hover { text-decoration: underline; }
 
     /* Form Controls & Modals */
     .form-control, .form-select {
@@ -142,29 +123,44 @@
         <div class="d-flex justify-content-between flex-wrap align-items-center pt-3 pb-3 mb-4 border-bottom">
           <div>
             <h1 class="h3 fw-bold text-dark m-0">Microfinance Dashboard</h1>
-            <p class="text-muted small m-0 mt-1">Manage your active loans, collections, and profit metrics efficiently.</p>
+            <p class="text-muted small m-0 mt-1">Manage active loans, principal, interest, and collections.</p>
           </div>
-          <button class="btn btn-success px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#issueLoanModal" style="border-radius: 8px;">+ Issue New Loan</button>
+          <div class="d-flex gap-2">
+            <a href="/api/reports/daily-collection" target="_blank" class="btn btn-outline-dark px-3 py-2 fw-semibold shadow-sm" style="border-radius: 8px;">📥 Daily Collection Sheet</a>
+            <button class="btn btn-success px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#issueLoanModal" style="border-radius: 8px;">+ Issue New Loan</button>
+          </div>
         </div>
 
-        <!-- Overview Cards -->
+        <!-- Overview Cards (Now 5 Cards with Today's Collection) -->
         <div class="row g-3 mb-4">
-          <div class="col-md-4">
-            <div class="card p-4 stat-card-1">
-              <span class="text-muted fw-semibold small text-uppercase">Total Issued Portfolio</span>
-              <h3 id="totalIssuedVal" class="fw-bold text-dark mt-2 mb-0">රු. 0.00</h3>
+          <div class="col-md">
+            <div class="card p-3 stat-card-1">
+              <span class="text-muted fw-semibold small text-uppercase">Total Principal</span>
+              <h5 id="totalPrincipalVal" class="fw-bold text-dark mt-2 mb-0">රු. 0.00</h5>
             </div>
           </div>
-          <div class="col-md-4">
-            <div class="card p-4 stat-card-2">
+          <div class="col-md">
+            <div class="card p-3 stat-card-3">
+              <span class="text-muted fw-semibold small text-uppercase">Total Interest</span>
+              <h5 id="totalInterestVal" class="fw-bold text-warning-emphasis mt-2 mb-0">රු. 0.00</h5>
+            </div>
+          </div>
+          <div class="col-md">
+            <div class="card p-3 border-start border-4 border-primary">
+              <span class="text-muted fw-semibold small text-uppercase">Total Portfolio</span>
+              <h5 id="totalIssuedVal" class="fw-bold text-dark mt-2 mb-0">රු. 0.00</h5>
+            </div>
+          </div>
+          <div class="col-md">
+            <div class="card p-3 stat-card-2">
               <span class="text-muted fw-semibold small text-uppercase">Total Collected</span>
-              <h3 id="totalCollectedVal" class="fw-bold text-success mt-2 mb-0">රු. 0.00</h3>
+              <h5 id="totalCollectedVal" class="fw-bold text-success mt-2 mb-0">රු. 0.00</h5>
             </div>
           </div>
-          <div class="col-md-4">
-            <div class="card p-4 stat-card-3">
-              <span class="text-muted fw-semibold small text-uppercase">Expected Profit (30%)</span>
-              <h3 id="expectedProfitVal" class="fw-bold text-dark mt-2 mb-0">රු. 0.00</h3>
+          <div class="col-md">
+            <div class="card p-3 stat-card-4">
+              <span class="text-muted fw-semibold small text-uppercase">Today's Collection</span>
+              <h5 id="todayCollectedVal" class="fw-bold text-primary mt-2 mb-0">රු. 0.00</h5>
             </div>
           </div>
         </div>
@@ -182,7 +178,8 @@
                   <th class="ps-3">#</th>
                   <th>Customer</th>
                   <th>NIC</th>
-                  <th>Phone</th>
+                  <th>Principal</th>
+                  <th>Interest</th>
                   <th>Total Amount</th>
                   <th>Progress</th>
                   <th class="text-end pe-3">Actions</th>
@@ -207,14 +204,21 @@
         <div class="modal-body pt-3">
           <form id="issueLoanForm">
             <div class="mb-3">
-              <label class="form-label fw-semibold small">Loan Date (දිනය තෝරන්න)</label>
+              <label class="form-label fw-semibold small">Loan Date (දිනය)</label>
               <input type="date" class="form-control" id="loanDate" required>
             </div>
             <div class="mb-3"><label class="form-label fw-semibold small">Customer Name</label><input type="text" class="form-control" id="loanName" required></div>
             <div class="mb-3"><label class="form-label fw-semibold small">NIC</label><input type="text" class="form-control" id="loanNic"></div>
             <div class="mb-3"><label class="form-label fw-semibold small">Phone</label><input type="text" class="form-control" id="loanPhone"></div>
             <div class="mb-3"><label class="form-label fw-semibold small">Guarantor Name</label><input type="text" class="form-control" id="loanGuarantor"></div>
-            <div class="mb-3"><label class="form-label fw-semibold small">Amount (Rs.)</label><input type="number" class="form-control" id="loanAmount" required></div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Principal Amount (මූලික ණය මුදල - Rs.)</label>
+              <input type="number" class="form-control" id="loanAmount" step="0.01" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Interest Amount (පොළිය - Rs.)</label>
+              <input type="number" class="form-control" id="loanInterest" step="0.01" required>
+            </div>
             <button type="submit" class="btn btn-success w-100 py-2 fw-bold mt-2" style="border-radius: 8px;">Create Loan</button>
           </form>
         </div>
@@ -246,15 +250,50 @@
     </div>
   </div>
 
+  <!-- Customer Profile / History Modal -->
+  <div class="modal fade" id="customerProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content p-4">
+        <div class="modal-header border-0 pb-2">
+          <h5 class="modal-title fw-bold text-dark" id="profileCustomerTitle">Customer Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-4">
+            <div class="col-md-6"><p class="mb-1 text-muted small fw-semibold">NIC Number</p><h6 id="profileNic" class="fw-bold">-</h6></div>
+            <div class="col-md-6"><p class="mb-1 text-muted small fw-semibold">Phone Number</p><h6 id="profilePhone" class="fw-bold">-</h6></div>
+          </div>
+          <h6 class="fw-bold text-dark mb-3">Loan History (පැරණි සහ වත්මන් ණය ඉතිහාසය)</h6>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Start Date</th>
+                  <th>Principal</th>
+                  <th>Interest</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="profileLoansBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let cardModalInstance = null;
+    let profileModalInstance = null;
     let allLoansData = [];
 
     document.addEventListener("DOMContentLoaded", () => {
       fetchLoans();
       cardModalInstance = new bootstrap.Modal(document.getElementById('cardModal'));
+      profileModalInstance = new bootstrap.Modal(document.getElementById('customerProfileModal'));
       document.getElementById('loanDate').valueAsDate = new Date();
 
       document.getElementById('issueLoanForm').addEventListener('submit', async (e) => {
@@ -265,7 +304,8 @@
           nic: document.getElementById('loanNic').value,
           phone: document.getElementById('loanPhone').value,
           guarantor_name: document.getElementById('loanGuarantor').value,
-          amount: document.getElementById('loanAmount').value
+          amount: document.getElementById('loanAmount').value,
+          interest: document.getElementById('loanInterest').value
         };
         const res = await fetch('/api/loans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await res.json();
@@ -284,32 +324,54 @@
     function renderTable(loans) {
       const tbody = document.getElementById('loansTableBody');
       tbody.innerHTML = '';
-      let totalIssuedSum = 0, totalCollectedSum = 0;
+      let totalPrincipalSum = 0, totalInterestSum = 0, totalIssuedSum = 0, totalCollectedSum = 0, todayCollectedSum = 0;
+      const todayStr = new Date().toISOString().split('T')[0];
 
       loans.forEach((loan, index) => {
-        const total = parseFloat(loan.amount || 0) + parseFloat(loan.interest || 0);
+        const principal = parseFloat(loan.amount || 0);
+        const interest = parseFloat(loan.interest || 0);
+        const total = principal + interest;
         const paid = parseFloat(loan.paid_amount || 0);
+
+        totalPrincipalSum += principal;
+        totalInterestSum += interest;
         totalIssuedSum += total;
         totalCollectedSum += paid;
+
+        // Calculate today's collection from schedule if available
+        if (loan.schedule) {
+          let startDate = loan.start_date ? new Date(loan.start_date) : new Date();
+          loan.schedule.forEach((day, dIdx) => {
+            let currDate = new Date(startDate);
+            currDate.setDate(startDate.getDate() + dIdx);
+            let dateStr = currDate.toISOString().split('T')[0];
+            if (dateStr === todayStr && day.status === 'Paid') {
+              todayCollectedSum += parseFloat(day.amountPaid || 0);
+            }
+          });
+        }
 
         tbody.innerHTML += `
           <tr>
             <td class="ps-3 fw-semibold text-muted">${index + 1}</td>
-            <td class="fw-bold text-dark">${loan.name}</td>
+            <td><a class="customer-link" onclick="openCustomerProfile('${loan.name}', '${loan.nic || ''}', '${loan.phone || ''}')">${loan.name}</a></td>
             <td><span class="badge bg-light text-dark border">${loan.nic || '-'}</span></td>
-            <td>${loan.phone || '-'}</td>
-            <td class="fw-semibold">රු. ${total.toFixed(2)}</td>
+            <td class="text-primary fw-semibold">රු. ${principal.toFixed(2)}</td>
+            <td class="text-warning-emphasis fw-semibold">රු. ${interest.toFixed(2)}</td>
+            <td class="fw-bold">රු. ${total.toFixed(2)}</td>
             <td class="text-success fw-semibold">රු. ${paid.toFixed(2)} / <span class="text-muted">රු. ${total.toFixed(2)}</span></td>
             <td class="text-end pe-3">
-              <button class="btn btn-sm btn-outline-dark fw-semibold px-3 me-1" onclick="viewCard(${loan.id})" style="border-radius: 6px;">View Card</button>
+              <button class="btn btn-sm btn-outline-dark fw-semibold px-2 me-1" onclick="viewCard(${loan.id})" style="border-radius: 6px;">View Card</button>
               <button class="btn btn-sm btn-outline-danger fw-semibold px-2" onclick="deleteLoan(${loan.id})" style="border-radius: 6px;">Delete</button>
             </td>
           </tr>
         `;
       });
+      document.getElementById('totalPrincipalVal').innerText = `රු. ${totalPrincipalSum.toFixed(2)}`;
+      document.getElementById('totalInterestVal').innerText = `රු. ${totalInterestSum.toFixed(2)}`;
       document.getElementById('totalIssuedVal').innerText = `රු. ${totalIssuedSum.toFixed(2)}`;
       document.getElementById('totalCollectedVal').innerText = `රු. ${totalCollectedSum.toFixed(2)}`;
-      document.getElementById('expectedProfitVal').innerText = `රු. ${(totalIssuedSum * 0.30).toFixed(2)}`;
+      document.getElementById('todayCollectedVal').innerText = `රු. ${todayCollectedSum.toFixed(2)}`;
     }
 
     function filterLoans() {
@@ -322,6 +384,39 @@
       renderTable(filtered);
     }
 
+    function openCustomerProfile(name, nic, phone) {
+      document.getElementById('profileCustomerTitle').innerText = `Customer Profile: ${name}`;
+      document.getElementById('profileNic').innerText = nic || '-';
+      document.getElementById('profilePhone').innerText = phone || '-';
+      
+      const tbody = document.getElementById('profileLoansBody');
+      tbody.innerHTML = '';
+      
+      const customerLoans = allLoansData.filter(l => l.name === name || (nic && l.nic === nic));
+      
+      if(customerLoans.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No history found</td></tr>`;
+      } else {
+        customerLoans.forEach(loan => {
+          const p = parseFloat(loan.amount || 0);
+          const i = parseFloat(loan.interest || 0);
+          const t = p + i;
+          const paid = parseFloat(loan.paid_amount || 0);
+          const status = paid >= t ? '<span class="badge bg-success">Completed</span>' : '<span class="badge bg-warning text-dark">Ongoing</span>';
+          
+          tbody.innerHTML += `
+            <tr>
+              <td>${loan.start_date || '-'}</td>
+              <td>රු. ${p.toFixed(2)}</td>
+              <td>රු. ${i.toFixed(2)}</td>
+              <td class="fw-bold">රු. ${t.toFixed(2)}</td>
+              <td>${status}</td>
+            </tr>`;
+        });
+      }
+      profileModalInstance.show();
+    }
+
     async function viewCard(loanId) {
       try {
         const res = await fetch(`/api/loans/${loanId}`);
@@ -329,11 +424,13 @@
         if (!loan || loan.error) return;
 
         document.getElementById('downloadPdfBtn').href = `/api/loans/${loanId}/pdf`;
-        const totalAmount = parseFloat(loan.amount || 0) + parseFloat(loan.interest || 0);
+        const principal = parseFloat(loan.amount || 0);
+        const interest = parseFloat(loan.interest || 0);
+        const totalAmount = principal + interest;
         const paidAmount = parseFloat(loan.paid_amount || 0);
         const dailyInstallment = totalAmount / (loan.days || 65);
 
-        document.getElementById('modalCustomerName').innerText = `${loan.name} - දින ${loan.days || 65} ණය කාඩ්පත`;
+        document.getElementById('modalCustomerName').innerText = `${loan.name} - දින ${loan.days || 65} ණය කාඩ්පත (මූලික: රු.${principal.toFixed(2)} + පොළිය: රු.${interest.toFixed(2)})`;
         document.getElementById('modalTotalLoan').innerText = `රු. ${totalAmount.toFixed(2)}`;
         document.getElementById('modalPaid').innerText = `රු. ${paidAmount.toFixed(2)}`;
         document.getElementById('modalRemaining').innerText = `රු. ${(totalAmount - paidAmount).toFixed(2)}`;
