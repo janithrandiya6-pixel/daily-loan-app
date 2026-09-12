@@ -6,12 +6,22 @@
   <title>LoanPro - Advanced Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .sidebar { background-color: #1a1a1a !important; border-right: 1px solid #333; min-height: 100vh; }
-    .card { background-color: #1e1e1e; border: 1px solid #333; }
-    .table { color: #e0e0e0; }
-    .modal-content { background-color: #1e1e1e; color: #e0e0e0; border: 1px solid #444; }
-    .nav-link.active { background-color: #2c2c2c; color: #fff !important; border-radius: 5px; }
+    /* මූලික පසුබිම සුදු පාටට සහ අකුරු පැහැදිලි තද පැහැයට හැරවීම */
+    body { background-color: #ffffff; color: #222222; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .sidebar { background-color: #f8f9fa !important; border-right: 1px solid #ddd; min-height: 100vh; }
+    .sidebar h3 { color: #212529 !important; }
+    .card { background-color: #fdfdfd; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+    .table { color: #222222; }
+    .modal-content { background-color: #ffffff; color: #222222; border: 1px solid #ccc; }
+    .nav-link.active { background-color: #0d6efd; color: #fff !important; border-radius: 5px; }
+    .nav-link.text-secondary { color: #495057 !important; }
+    
+    /* ෆෝම් සහ ඉන්පුට්ස් වඩාත් පැහැදිලි කිරීම */
+    .form-control, .form-select {
+        background-color: #fff !important;
+        color: #000 !important;
+        border: 1px solid #ced4da !important;
+    }
   </style>
 </head>
 <body>
@@ -20,9 +30,9 @@
     <div class="row">
       <!-- Sidebar -->
       <nav class="col-md-3 col-lg-2 d-md-block sidebar py-4 px-3">
-        <h3 class="text-white fw-bold mb-4">LoanPro</h3>
+        <h3 class="fw-bold mb-4">LoanPro</h3>
         <ul class="nav flex-column gap-2">
-          <li class="nav-item"><a href="index.html" class="nav-link text-white active">📊 Dashboard</a></li>
+          <li class="nav-item"><a href="index.html" class="nav-link active">📊 Dashboard</a></li>
           <li class="nav-item"><a href="analytics.html" class="nav-link text-secondary">📈 Analytics & Expenses</a></li>
         </ul>
       </nav>
@@ -30,13 +40,13 @@
       <!-- Main Content -->
       <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
         <div class="d-flex justify-content-between flex-wrap align-items-center pt-3 pb-2 mb-3 border-bottom border-secondary">
-          <h1 class="h2">Microfinance Management System</h1>
+          <h1 class="h2 text-dark">Microfinance Management System</h1>
           <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#issueLoanModal">+ Issue New Loan</button>
         </div>
 
         <!-- Overview Cards -->
         <div class="row g-3 mb-4">
-          <div class="col-md-4"><div class="card p-3"><h6 class="text-muted">Total Issued Portfolio</h6><h3 id="totalIssuedVal" class="text-white">රු. 0.00</h3></div></div>
+          <div class="col-md-4"><div class="card p-3"><h6 class="text-muted">Total Issued Portfolio</h6><h3 id="totalIssuedVal" class="text-primary">රු. 0.00</h3></div></div>
           <div class="col-md-4"><div class="card p-3"><h6 class="text-muted">Total Collected</h6><h3 id="totalCollectedVal" class="text-success">රු. 0.00</h3></div></div>
           <div class="col-md-4"><div class="card p-3"><h6 class="text-muted">Expected Profit (30%)</h6><h3 id="expectedProfitVal" class="text-warning">රු. 0.00</h3></div></div>
         </div>
@@ -44,11 +54,11 @@
         <!-- Loans Table with Advanced Search -->
         <div class="card p-4 shadow-sm">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="h5 m-0">Active Loans List</h3>
-            <input type="text" id="searchInput" onkeyup="filterLoans()" class="form-control bg-dark text-white border-secondary w-25" placeholder="Search Name, NIC, Phone...">
+            <h3 class="h5 m-0 text-dark">Active Loans List</h3>
+            <input type="text" id="searchInput" onkeyup="filterLoans()" class="form-control w-25" placeholder="Search Name, NIC, Phone...">
           </div>
           <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle">
+            <table class="table table-hover align-middle">
               <thead>
                 <tr>
                   <th>#</th>
@@ -72,14 +82,18 @@
   <div class="modal fade" id="issueLoanModal" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content p-3">
-        <div class="modal-header border-bottom border-secondary"><h5 class="modal-title">Issue New Loan</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-header border-bottom"><h5 class="modal-title">Issue New Loan</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
           <form id="issueLoanForm">
-            <div class="mb-3"><label class="form-label">Customer Name</label><input type="text" class="form-control bg-dark text-white border-secondary" id="loanName" required></div>
-            <div class="mb-3"><label class="form-label">NIC</label><input type="text" class="form-control bg-dark text-white border-secondary" id="loanNic"></div>
-            <div class="mb-3"><label class="form-label">Phone</label><input type="text" class="form-control bg-dark text-white border-secondary" id="loanPhone"></div>
-            <div class="mb-3"><label class="form-label">Guarantor Name</label><input type="text" class="form-control bg-dark text-white border-secondary" id="loanGuarantor"></div>
-            <div class="mb-3"><label class="form-label">Amount (Rs.)</label><input type="number" class="form-control bg-dark text-white border-secondary" id="loanAmount" required></div>
+            <div class="mb-3">
+              <label class="form-label">Loan Date (කැමති දිනයක් තෝරන්න)</label>
+              <input type="date" class="form-control" id="loanDate" required>
+            </div>
+            <div class="mb-3"><label class="form-label">Customer Name</label><input type="text" class="form-control" id="loanName" required></div>
+            <div class="mb-3"><label class="form-label">NIC</label><input type="text" class="form-control" id="loanNic"></div>
+            <div class="mb-3"><label class="form-label">Phone</label><input type="text" class="form-control" id="loanPhone"></div>
+            <div class="mb-3"><label class="form-label">Guarantor Name</label><input type="text" class="form-control" id="loanGuarantor"></div>
+            <div class="mb-3"><label class="form-label">Amount (Rs.)</label><input type="number" class="form-control" id="loanAmount" required></div>
             <button type="submit" class="btn btn-success w-100">Create Loan</button>
           </form>
         </div>
@@ -90,20 +104,20 @@
   <!-- 65-Day Card Modal -->
   <div class="modal fade" id="cardModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
-      <div class="modal-content p-4 bg-dark text-white border border-secondary">
-        <div class="modal-header border-bottom border-secondary">
-          <h5 class="modal-title fw-bold" id="modalCustomerName">ණය කාඩ්පත</h5>
+      <div class="modal-content p-4 border">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold text-dark" id="modalCustomerName">ණය කාඩ්පත</h5>
           <div>
             <a id="downloadPdfBtn" href="#" class="btn btn-sm btn-outline-warning me-2" target="_blank">📥 Download PDF</a>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
         </div>
         <div class="modal-body">
           <div class="row text-center g-2 mb-4">
-            <div class="col-md-3"><div class="p-3 bg-black rounded border border-secondary"><small class="text-muted">මුළු ණය මුදල</small><br><strong id="modalTotalLoan" class="fs-5">රු. 0.00</strong></div></div>
-            <div class="col-md-3"><div class="p-3 bg-black rounded border border-secondary"><small class="text-muted">ලබාගත් මුළු මුදල (Paid)</small><br><strong id="modalPaid" class="text-success fs-5">රු. 0.00</strong></div></div>
-            <div class="col-md-3"><div class="p-3 bg-black rounded border border-secondary"><small class="text-muted">ලැබීමට ඇති (Remaining)</small><br><strong id="modalRemaining" class="text-danger fs-5">රු. 0.00</strong></div></div>
-            <div class="col-md-3"><div class="p-3 bg-black rounded border border-secondary"><small class="text-muted">සම්පූර්ණ කළ දින</small><br><strong id="modalDays" class="text-warning fs-5">0 / 65</strong></div></div>
+            <div class="col-md-3"><div class="p-3 bg-light rounded border"><small class="text-muted">මුළු ණය මුදල</small><br><strong id="modalTotalLoan" class="fs-5 text-dark">රු. 0.00</strong></div></div>
+            <div class="col-md-3"><div class="p-3 bg-light rounded border"><small class="text-muted">ලබාගත් මුළු මුදල (Paid)</small><br><strong id="modalPaid" class="text-success fs-5">රු. 0.00</strong></div></div>
+            <div class="col-md-3"><div class="p-3 bg-light rounded border"><small class="text-muted">ලැබීමට ඇති (Remaining)</small><br><strong id="modalRemaining" class="text-danger fs-5">රු. 0.00</strong></div></div>
+            <div class="col-md-3"><div class="p-3 bg-light rounded border"><small class="text-muted">සම්පූර්ණ කළ දින</small><br><strong id="modalDays" class="text-primary fs-5">0 / 65</strong></div></div>
           </div>
           <div id="daysGridContainer" class="row g-3" style="max-height: 550px; overflow-y: auto;"></div>
         </div>
@@ -120,9 +134,13 @@
       fetchLoans();
       cardModalInstance = new bootstrap.Modal(document.getElementById('cardModal'));
 
+      // ස්වයංක්‍රීයව අද දිනය දාලා තියන්න (අවශ්‍ය නම් වෙනස් කරගන්න පුළුවන්)
+      document.getElementById('loanDate').valueAsDate = new Date();
+
       document.getElementById('issueLoanForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = {
+          start_date: document.getElementById('loanDate').value, // තෝරාගත් දිනය මෙතනින් යැවේ
           name: document.getElementById('loanName').value,
           nic: document.getElementById('loanNic').value,
           phone: document.getElementById('loanPhone').value,
@@ -210,19 +228,19 @@
           currDate.setDate(startDate.getDate() + index);
           let dateStr = currDate.toISOString().split('T')[0];
           const isPaid = day.status === 'Paid';
-          const cardBg = isPaid ? 'rgba(25, 135, 84, 0.15)' : 'rgba(220, 53, 69, 0.15)';
+          const cardBg = isPaid ? 'rgba(25, 135, 84, 0.08)' : 'rgba(220, 53, 69, 0.08)';
 
           gridContainer.innerHTML += `
             <div class="col-md-4">
-              <div class="card p-3 border border-secondary" style="background-color: ${cardBg};">
+              <div class="card p-3 border" style="background-color: ${cardBg};">
                 <div class="d-flex justify-content-between mb-2">
-                  <span class="fw-bold">${day.dayNumber}) ${dateStr}</span>
+                  <span class="fw-bold text-dark">${day.dayNumber}) ${dateStr}</span>
                   <span class="badge ${isPaid ? 'bg-success' : 'bg-danger'}">${day.status}</span>
                 </div>
                 <small class="text-muted mb-2">වාරිකය: රු. ${dailyInstallment.toFixed(2)}</small>
                 <div class="input-group input-group-sm mb-2">
-                  <span class="input-group-text bg-dark text-white border-secondary">රු.</span>
-                  <input type="number" id="input_val_${loan.id}_${day.dayNumber}" class="form-control bg-dark text-white border-secondary" value="${parseFloat(day.amountPaid) > 0 ? day.amountPaid : dailyInstallment.toFixed(2)}">
+                  <span class="input-group-text bg-light text-dark">රු.</span>
+                  <input type="number" id="input_val_${loan.id}_${day.dayNumber}" class="form-control" value="${parseFloat(day.amountPaid) > 0 ? day.amountPaid : dailyInstallment.toFixed(2)}">
                   <button class="btn btn-primary btn-sm" onclick="sendPayment(${loan.id}, ${day.dayNumber})">Save</button>
                 </div>
                 <button class="btn btn-success btn-sm w-100" onclick="sendPayment(${loan.id}, ${day.dayNumber}, ${dailyInstallment})">✓ Full Pay</button>
