@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Collection UI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+    .header-bar { background: #0f172a; color: white; padding: 15px; border-bottom: 4px solid #0284c7; }
+    .customer-card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; }
+    .customer-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    
+    .modal-header-custom { background: #0d6efd; color: white; }
+    .sub-header-bar { background: #e0f7fa; color: #006064; padding: 10px 15px; font-weight: 500; font-size: 14px; }
+    .stat-card-custom { background: white; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; padding: 10px; }
+    
+    .pay-card { background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .pay-card.is-paid { background: #f0fdf4; border-color: #bbf7d0; }
+    .badge-pending { background-color: #dc3545; color: white; font-size: 11px; }
+    .badge-completed { background-color: #198754; color: white; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar d-flex justify-content-between align-items-center">
+    <h4 class="m-0"><i class="bi bi-card-checklist me-2"></i>Daily Collection Management</h4>
+    <button id="logout-btn" class="btn btn-outline-light btn-sm">Logout</button>
+  </div>
+
+  <div class="container py-4">
+    <input type="text" id="search-input" class="form-control form-control-lg mb-4" placeholder="Search Customer Name, Phone, NIC...">
+    <div id="customers-container" class="row"></div>
+  </div>
+
+  <!-- Loan Card Modal -->
+  <div class="modal fade" id="loanCardModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        
+        <div class="modal-header modal-header-custom py-2">
+          <h5 class="modal-title fw-bold" id="m-header-title">Customer - දින 65 ණය කාඩ්පත</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="sub-header-bar d-flex justify-content-between align-items-center">
+          <div><i class="bi bi-shield-lock-fill text-warning me-1"></i> ඇපකරු: <span id="m-guarantor" class="fw-bold">--</span></div>
+          <div><i class="bi bi-telephone-fill me-1"></i> Phone: <span id="m-phone" class="fw-bold">--</span></div>
+        </div>
+
+        <div class="modal-body bg-light">
+          <div class="row g-2 mb-3">
+            <div class="col-3"><div class="stat-card-custom"><small class="text-muted d-block">මුළු ණය</small><strong class="fs-5 text-dark" id="m-total-loan">රු. 0.00</strong></div></div>
+            <div class="col-3"><div class="stat-card-custom"><small class="text-muted d-block">ගෙවූ</small><strong class="fs-5 text-success" id="m-total-paid">රු. 0.00</strong></div></div>
+            <div class="col-3"><div class="stat-card-custom"><small class="text-muted d-block">ඉතිරි</small><strong class="fs-5 text-danger" id="m-total-balance">රු. 0.00</strong></div></div>
+            <div class="col-3"><div class="stat-card-custom"><small class="text-muted d-block">සම්පූර්ණ කළ දින</small><strong class="fs-5 text-primary" id="m-days-progress">0 / 65</strong></div></div>
+          </div>
+
+          <div class="row" id="m-grid-container"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const API_URL = '/api';
+    let token = localStorage.getItem('token');
+    let allLoans = [];
+
+    if (!token) window.location.href = '/';
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.clear();
+      window.location.href = '/';
+    });
+
+    async function loadLoans() {
+      try {
+        const res = await fetch(`${API_URL}/loans`, { headers: { 'Authorization': `Bearer ${token}` } });
+        allLoans = await res.json();
+        renderCustomers(allLoans);
+      } catch (err) { console.error(err); }
+    }
+
+    function renderCustomers(loans) {
+      const container = document.getElementById('customers-container');
+      container.innerHTML = '';
+      if (!loans || loans.length === 0) {
+        container.innerHTML = `<div class="col-12 text-center text-muted py-4">No loans found.</div>`;
+        return;
+      }
+
+      loans.forEach(loan => {
+        const total = loan.amount + loan.interest;
+        container.innerHTML += `
+          <div class="col-md-4 mb-3">
+            <div class="customer-card p-3 shadow-sm" onclick="openLoanModal(${loan.id})">
+              <div class="d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold m-0 text-primary">${loan.name}</h5>
+                <span class="badge bg-secondary">${loan.paid_days || 0} / 65 Days</span>
+              </div>
+              <small class="text-muted d-block mt-1">NIC: ${loan.nic} | Phone: ${loan.phone}</small>
+              <hr class="my-2">
+              <div class="d-flex justify-content-between fs-6">
+                <span>Amount: <strong>Rs. ${total.toLocaleString()}</strong></span>
+                <span class="text-success">Paid: <strong>Rs. ${(loan.paid_amount || 0).toLocaleString()}</strong></span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function openLoanModal(loanId) {
+      const loan = allLoans.find(l => l.id === loanId);
+      if (!loan) return;
+
+      const totalPayable = loan.amount + loan.interest;
+      const dailyInstallment = Math.round(totalPayable / 65);
+      const paidAmount = loan.paid_amount || 0;
+
+      document.getElementById('m-header-title').innerText = `${loan.name} - දින 65 ණය කාඩ්පත`;
+      document.getElementById('m-guarantor').innerText = loan.guarantor_name || 'නැත (None)';
+      document.getElementById('m-phone').innerText = loan.phone;
+      document.getElementById('m-total-loan').innerText = `රු. ${totalPayable.toFixed(2)}`;
+      document.getElementById('m-total-paid').innerText = `රු. ${paidAmount.toFixed(2)}`;
+      document.getElementById('m-total-balance').innerText = `රු. ${(totalPayable - paidAmount).toFixed(2)}`;
+      document.getElementById('m-days-progress').innerText = `${loan.paid_days || 0} / 65`;
+
+      const paymentsMap = {};
+      if (loan.payments) loan.payments.forEach(p => { paymentsMap[p.day_number] = p; });
+
+      const grid = document.getElementById('m-grid-container');
+      grid.innerHTML = '';
+
+      const startDate = new Date(loan.date || new Date());
+
+      for (let day = 1; day <= 65; day++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + (day - 1));
+        const formattedDate = currentDate.toISOString().split('T')[0];
+        const isPaid = paymentsMap[day];
+
+        let cardHtml = '';
+        if (isPaid) {
+          cardHtml = `
+            <div class="pay-card is-paid">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong>${day}) ${isPaid.date || formattedDate}</strong>
+                <span class="badge badge-completed">Paid</span>
+              </div>
+              <div class="small text-muted mb-2">වාරිකය: රු. ${dailyInstallment}.00</div>
+              <div class="text-success fw-bold text-center py-1 bg-white border rounded">✓ paid (රු. ${isPaid.amount_paid})</div>
+            </div>
+          `;
+        } else {
+          cardHtml = `
+            <div class="pay-card">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong>${day}) ${formattedDate}</strong>
+                <span class="badge badge-pending">Pending</span>
+              </div>
+              <div class="small text-muted mb-2">වාරිකය: රු. ${dailyInstallment}.00</div>
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text">රු.</span>
+                <input type="number" id="input-pay-${day}" class="form-control" value="${dailyInstallment}">
+                <button class="btn btn-primary" onclick="submitPay(${loan.id}, ${day}, '${formattedDate}', 'custom')">Save</button>
+              </div>
+              <button class="btn btn-success btn-sm w-100 fw-bold" onclick="submitPay(${loan.id}, ${day}, '${formattedDate}', 'full', ${dailyInstallment})">✓ Full Pay</button>
+            </div>
+          `;
+        }
+        grid.innerHTML += `<div class="col-md-4">${cardHtml}</div>`;
+      }
+
+      new bootstrap.Modal(document.getElementById('loanCardModal')).show();
+    }
+
+    async function submitPay(loan_id, day_number, date, type, defaultVal) {
+      let amount_paid = defaultVal;
+      if (type === 'custom') {
+        amount_paid = parseFloat(document.getElementById(`input-pay-${day_number}`).value);
+      }
+
+      if (!amount_paid || amount_paid <= 0) return alert("Invalid amount!");
+
+      try {
+        const res = await fetch(`${API_URL}/payments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ loan_id, day_number, date, amount_paid })
+        });
+
+        if (res.ok) {
+          const resLoans = await fetch(`${API_URL}/loans`, { headers: { 'Authorization': `Bearer ${token}` } });
+          allLoans = await resLoans.json();
+          renderCustomers(allLoans);
+          openLoanModal(loan_id);
+        } else {
+          alert("Error saving payment!");
+        }
+      } catch (err) { alert("Server error!"); }
+    }
+
+    loadLoans();
+  </script>
+</body>
+</html>
