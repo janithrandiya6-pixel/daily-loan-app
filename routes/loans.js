@@ -64,8 +64,10 @@ router.get('/:id', async (req, res) => {
     }
 
     const totalDays = parseInt(loan.days || 65, 10);
-    const totalAmount = parseFloat(loan.amount || 0) + parseFloat(loan.interest || 0);
-    const dailyInstallment = totalAmount / totalDays;
+    const loanPrincipal = parseFloat(loan.amount || loan.principal || 0);
+    const loanInterest = parseFloat(loan.interest || 0);
+    const totalAmount = loanPrincipal + loanInterest;
+    const dailyInstallment = totalDays > 0 ? (totalAmount / totalDays) : 0;
 
     const schedule = [];
     let paidDaysCount = 0;
@@ -100,24 +102,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// 3. Create New Loan
+// 3. Create New Loan (Fixed to match frontend & Turso table columns)
 router.post('/', async (req, res) => {
-  const { name, nic, phone, guarantor_name, amount, interest, days, start_date } = req.body;
+  const customerName = req.body.customer || req.body.name;
+  const { nic, phone, guarantor_name, guarantor, amount, principal, interest, days, start_date, date } = req.body;
 
-  if (!name || !amount) {
-    return res.status(400).json({ error: "Name and Amount are required" });
+  const loanAmount = parseFloat(amount || principal || 0);
+
+  if (!customerName || !loanAmount) {
+    return res.status(400).json({ error: "Customer Name and Amount are required" });
   }
 
   try {
-    const loanAmount = parseFloat(amount);
     const loanInterest = interest !== undefined ? parseFloat(interest) : (loanAmount * 0.30);
     const totalDays = days ? parseInt(days, 10) : 65;
-    const startDateVal = start_date || new Date().toISOString().split('T')[0];
+    const startDateVal = start_date || date || new Date().toISOString().split('T')[0];
+    const gName = guarantor_name || guarantor || '';
 
     await executeQuery(
-      `INSERT INTO loans (name, nic, phone, guarantor_name, amount, interest, days, start_date) 
+      `INSERT INTO loans (customer, nic, phone, guarantor, principal, interest, days, date) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, nic || '', phone || '', guarantor_name || '', loanAmount, loanInterest, totalDays, startDateVal]
+      [customerName, nic || '', phone || '', gName, loanAmount, loanInterest, totalDays, startDateVal]
     );
 
     return res.json({ success: true, message: "Loan issued successfully!" });

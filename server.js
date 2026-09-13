@@ -1,18 +1,14 @@
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import 'dotenv/config';
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-// Import routes (routes ෆෝල්ඩර් එකේ තියෙන ෆයිල්ස් මෙතෙන්ට ඉම්පෝර්ට් කරන්න)
-import loanRoutes from './routes/loans.js';
-import expenseRoutes from './routes/expenses.js';
-import customerRoutes from './routes/customer.js';
-import authRoutes from './routes/auth.js';
-import paymentRoutes from './routes/payments.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Import routes
+const loanRoutes = require('./routes/loans');
+const expenseRoutes = require('./routes/expenses');
+const customerRoutes = require('./routes/customer');
+const authRoutes = require('./routes/auth');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 
@@ -43,4 +39,4 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-export default app;
+module.exports = app;
