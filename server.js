@@ -63,7 +63,30 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running and connected to Turso!' });
 });
 
-// Save Capital Route
+// --- LOANS API ROUTES (Dashboard) ---
+app.get('/api/loans', async (req, res) => {
+  try {
+    const result = await db.execute(`SELECT * FROM loans ORDER BY id DESC`);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/loans', async (req, res) => {
+  try {
+    const { customer, nic, phone, guarantor, principal, interest, date } = req.body;
+    await db.execute({
+      sql: `INSERT INTO loans (customer, nic, phone, guarantor, principal, interest, date) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [customer, nic, phone, guarantor, principal, interest, date]
+    });
+    res.json({ success: true, message: 'Loan created successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- CAPITAL API ROUTES ---
 app.post('/api/capital', async (req, res) => {
   try {
     const { date, investor, amount, note } = req.body;
@@ -77,10 +100,10 @@ app.post('/api/capital', async (req, res) => {
   }
 });
 
-// Save Expense Route
+// --- EXPENSES API ROUTES ---
 app.post('/api/expenses', async (req, res) => {
   try {
-    const { date, category, amount }  = req.body;
+    const { date, category, amount } = req.body;
     await db.execute({
       sql: `INSERT INTO expenses (date, category, amount) VALUES (?, ?, ?)`,
       args: [date, category, amount]
@@ -91,19 +114,21 @@ app.post('/api/expenses', async (req, res) => {
   }
 });
 
-// Analytics Data Route
+// --- ANALYTICS API ROUTE ---
 app.get('/api/analytics', async (req, res) => {
   try {
     const capitalRes = await db.execute(`SELECT SUM(amount) as total FROM capitals`);
     const expenseRes = await db.execute(`SELECT SUM(amount) as total FROM expenses`);
+    const loansRes = await db.execute(`SELECT SUM(principal) as totalPrincipal, SUM(interest) as totalInterest FROM loans`);
     
     res.json({
       totalCapital: capitalRes.rows[0]?.total || 0,
       totalExpenses: expenseRes.rows[0]?.total || 0,
       netCashFlow: (capitalRes.rows[0]?.total || 0) - (expenseRes.rows[0]?.total || 0),
+      totalPrincipal: loansRes.rows[0]?.totalPrincipal || 0,
+      totalInterest: loansRes.rows[0]?.totalInterest || 0,
       todaysCollection: 0,
-      totalCollected: 0,
-      totalInterest: 11999.12
+      totalCollected: 0
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
