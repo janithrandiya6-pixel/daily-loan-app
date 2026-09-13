@@ -1,148 +1,152 @@
+// routes/loans.js - Updated Loan Management & Collection Routes
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db');
+const verifyToken = require('../middleware/auth');
 
-const executeQuery = async (sql, params = []) => {
-  if (typeof db.queryDB === 'function') {
-    return await db.queryDB(sql, params);
-  } else if (typeof db.execute === 'function') {
-    return await db.execute(sql, params);
-  } else {
-    throw new Error("Database query function not available");
-  }
-};
+module.exports = (db) => {
+  // Initialize Database Tables with all required columns
+  db.execute(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      phone TEXT,
+      address TEXT,
+      nic TEXT
+    )
+  `).catch(err => console.error("Customers table error:", err));
 
-// 1. Get All Active Loans
-router.get('/', async (req, res) => {
-  try {
-    const loans = await executeQuery('SELECT * FROM loans ORDER BY id DESC');
-    const payments = await executeQuery('SELECT loan_id, SUM(amount_paid) as total_paid FROM payments GROUP BY loan_id');
+  db.execute(`
+    CREATE TABLE IF NOT EXISTS loans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER,
+      guarantor TEXT,
+      principal_amount REAL,
+      interest_amount REAL,
+      total_amount REAL NOT NULL,
+      daily_installment REAL NOT NULL,
+      duration_days INTEGER NOT NULL,
+      balance REAL NOT NULL,
+      status TEXT DEFAULT 'ACTIVE',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(customer_id) REFERENCES customers(id)
+    )
+  `).catch(err => console.error("Loans table error:", err));
 
-    const paidMap = {};
-    if (Array.isArray(payments)) {
-      payments.forEach(p => {
-        paidMap[p.loan_id] = parseFloat(p.total_paid || 0);
+  db.execute(`
+    CREATE TABLE IF NOT EXISTS collections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      loan_id INTEGER,
+      amount REAL NOT NULL,
+      collected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(loan_id) REFERENCES loans(id)
+    )
+  `).catch(err => console.error("Collections table error:", err));
+
+  // Get all active loans & customer data
+  router.get('/', verifyToken, async (req, res) => {
+    try {
+      const rs = await db.execute(`
+        SELECT loans.*, customers.name as customer_name, customers.phone, customers.nic 
+        FROM loans 
+        JOIN customers ON loans.customer_id = customers.id
+      `);
+      res.json(rs.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Create a new loan and customer
+  router.post('/', verifyToken, async (req, res) => {
+    const { 
+      name, 
+      phone, 
+      address, 
+      nic, 
+      guarantor, 
+      principal_amount, 
+      interest_amount, 
+      total_amount, 
+      daily_installment, 
+      duration_days 
+    } = req.body;
+
+    try {
+      // 1. Calculate or assign values safely
+      const principal = Number(principal_amount) || 0;
+      const interest = Number(interest_amount) || 0;
+      const calculatedTotal = total_amount ? Number(total_amount) : (principal + interest);
+      const duration = Number(duration_days) || 100; // Default to 100 days if not provided
+      const installment = daily_installment ? Number(daily_installment) : (calculatedTotal / duration);
+
+      // 2. Insert customer
+      const custResult = await db.execute({
+        sql: 'INSERT INTO customers (name, phone, address, nic) VALUES (?, ?, ?, ?)',
+        args: [name || 'Unknown', phone || '', address || '', nic || '']
       });
-    }
+      const customerId = Number(custResult.lastInsertRowid);
 
-    const formattedLoans = (Array.isArray(loans) ? loans : []).map(loan => ({
-      ...loan,
-      paid_amount: paidMap[loan.id] || 0
-    }));
-
-    return res.json(formattedLoans);
-  } catch (err) {
-    console.error("Get Loans Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// 2. Get Single Loan Details with Payments & Strictly Calculated Schedule
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const loans = await executeQuery('SELECT * FROM loans WHERE id = ?', [id]);
-    if (!loans || loans.length === 0) {
-      return res.status(404).json({ error: "Loan not found" });
-    }
-
-    const loan = loans[0];
-    const payments = await executeQuery('SELECT * FROM payments WHERE loan_id = ? ORDER BY day_number ASC', [id]);
-
-    const dayPaymentsMap = {};
-    let totalPaid = 0;
-
-    if (Array.isArray(payments)) {
-      payments.forEach(p => {
-        if (p.day_number !== undefined && p.day_number !== null) {
-          const dNum = parseInt(p.day_number, 10);
-          const amt = parseFloat(p.amount_paid || 0);
-          dayPaymentsMap[dNum] = (dayPaymentsMap[dNum] || 0) + amt;
-        }
-        totalPaid += parseFloat(p.amount_paid || 0);
+      // 3. Create Loan
+      await db.execute({
+        sql: `INSERT INTO loans (
+                customer_id, guarantor, principal_amount, interest_amount, 
+                total_amount, daily_installment, duration_days, balance
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          customerId, 
+          guarantor || '', 
+          principal, 
+          interest, 
+          calculatedTotal, 
+          installment, 
+          duration, 
+          calculatedTotal
+        ]
       });
+
+      res.status(201).json({ message: 'Loan created successfully' });
+    } catch (err) {
+      console.error("Loan creation error:", err);
+      res.status(500).json({ error: err.message });
     }
+  });
 
-    const totalDays = parseInt(loan.days || 65, 10);
-    const loanPrincipal = parseFloat(loan.amount || loan.principal || 0);
-    const loanInterest = parseFloat(loan.interest || 0);
-    const totalAmount = loanPrincipal + loanInterest;
-    const dailyInstallment = totalDays > 0 ? (totalAmount / totalDays) : 0;
+  // Record a daily payment collection
+  router.post('/:id/collect', verifyToken, async (req, res) => {
+    const loanId = req.params.id;
+    const { amount } = req.body;
 
-    const schedule = [];
-    let paidDaysCount = 0;
+    try {
+      const loanRs = await db.execute({
+        sql: 'SELECT * FROM loans WHERE id = ?',
+        args: [loanId]
+      });
 
-    for (let i = 1; i <= totalDays; i++) {
-      const amtPaid = dayPaymentsMap[i] || 0;
-      let status = 'Pending';
-      if (amtPaid >= (dailyInstallment - 0.05)) {
-        status = 'Paid';
-        paidDaysCount++;
-      } else if (amtPaid > 0) {
-        status = 'Partial';
+      if (loanRs.rows.length === 0) {
+        return res.status(404).json({ error: 'Loan not found' });
       }
 
-      schedule.push({
-        dayNumber: i,
-        amountPaid: amtPaid.toFixed(2),
-        status: status
+      const loan = loanRs.rows[0];
+      const newBalance = Math.max(0, loan.balance - Number(amount));
+      const newStatus = newBalance === 0 ? 'COMPLETED' : 'ACTIVE';
+
+      // Insert collection log
+      await db.execute({
+        sql: 'INSERT INTO collections (loan_id, amount) VALUES (?, ?)',
+        args: [loanId, amount]
       });
+
+      // Update loan balance & status
+      await db.execute({
+        sql: 'UPDATE loans SET balance = ?, status = ? WHERE id = ?',
+        args: [newBalance, newStatus, loanId]
+      });
+
+      res.json({ message: 'Collection recorded successfully', newBalance, status: newStatus });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
+  });
 
-    return res.json({
-      ...loan,
-      paid_amount: totalPaid,
-      paid_days: paidDaysCount,
-      payments: payments || [],
-      schedule: schedule
-    });
-  } catch (err) {
-    console.error("Get Single Loan Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// 3. Create New Loan (Fixed to match frontend & Turso table columns)
-router.post('/', async (req, res) => {
-  const customerName = req.body.customer || req.body.name;
-  const { nic, phone, guarantor_name, guarantor, amount, principal, interest, days, start_date, date } = req.body;
-
-  const loanAmount = parseFloat(amount || principal || 0);
-
-  if (!customerName || !loanAmount) {
-    return res.status(400).json({ error: "Customer Name and Amount are required" });
-  }
-
-  try {
-    const loanInterest = interest !== undefined ? parseFloat(interest) : (loanAmount * 0.30);
-    const totalDays = days ? parseInt(days, 10) : 65;
-    const startDateVal = start_date || date || new Date().toISOString().split('T')[0];
-    const gName = guarantor_name || guarantor || '';
-
-    await executeQuery(
-      `INSERT INTO loans (customer, nic, phone, guarantor, principal, interest, days, date) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [customerName, nic || '', phone || '', gName, loanAmount, loanInterest, totalDays, startDateVal]
-    );
-
-    return res.json({ success: true, message: "Loan issued successfully!" });
-  } catch (err) {
-    console.error("Create Loan Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// 4. Delete Loan
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await executeQuery('DELETE FROM payments WHERE loan_id = ?', [id]);
-    await executeQuery('DELETE FROM loans WHERE id = ?', [id]);
-    return res.json({ success: true, message: "Loan deleted successfully" });
-  } catch (err) {
-    console.error("Delete Loan Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-module.exports = router;
+  return router;
+};
