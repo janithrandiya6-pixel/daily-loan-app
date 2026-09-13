@@ -1,46 +1,54 @@
-// routes/loans.js - Updated Loan Management & Collection Routes
+// routes/loans.js - Robust Loan Management & Collection Routes
 const express = require('express');
 const router = express.Router();
 const verifyToken = require('../middleware/auth');
 
 module.exports = (db) => {
-  // Initialize Database Tables with all required columns
-  db.execute(`
-    CREATE TABLE IF NOT EXISTS customers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      phone TEXT,
-      address TEXT,
-      nic TEXT
-    )
-  `).catch(err => console.error("Customers table error:", err));
+  // Initialize Database Tables safely
+  const initTables = async () => {
+    try {
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS customers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT,
+          address TEXT,
+          nic TEXT
+        )
+      `);
 
-  db.execute(`
-    CREATE TABLE IF NOT EXISTS loans (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_id INTEGER,
-      guarantor TEXT,
-      principal_amount REAL,
-      interest_amount REAL,
-      total_amount REAL NOT NULL,
-      daily_installment REAL NOT NULL,
-      duration_days INTEGER NOT NULL,
-      balance REAL NOT NULL,
-      status TEXT DEFAULT 'ACTIVE',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(customer_id) REFERENCES customers(id)
-    )
-  `).catch(err => console.error("Loans table error:", err));
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS loans (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customer_id INTEGER,
+          guarantor TEXT,
+          principal_amount REAL,
+          interest_amount REAL,
+          total_amount REAL NOT NULL,
+          daily_installment REAL NOT NULL,
+          duration_days INTEGER NOT NULL,
+          balance REAL NOT NULL,
+          status TEXT DEFAULT 'ACTIVE',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(customer_id) REFERENCES customers(id)
+        )
+      `);
 
-  db.execute(`
-    CREATE TABLE IF NOT EXISTS collections (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      loan_id INTEGER,
-      amount REAL NOT NULL,
-      collected_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(loan_id) REFERENCES loans(id)
-    )
-  `).catch(err => console.error("Collections table error:", err));
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS collections (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          loan_id INTEGER,
+          amount REAL NOT NULL,
+          collected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(loan_id) REFERENCES loans(id)
+        )
+      `);
+    } catch (err) {
+      console.error("Table initialization error:", err);
+    }
+  };
+
+  initTables();
 
   // Get all active loans & customer data
   router.get('/', verifyToken, async (req, res) => {
@@ -52,6 +60,7 @@ module.exports = (db) => {
       `);
       res.json(rs.rows);
     } catch (err) {
+      console.error("Get loans error:", err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -72,21 +81,20 @@ module.exports = (db) => {
     } = req.body;
 
     try {
-      // 1. Calculate or assign values safely
       const principal = Number(principal_amount) || 0;
       const interest = Number(interest_amount) || 0;
       const calculatedTotal = total_amount ? Number(total_amount) : (principal + interest);
-      const duration = Number(duration_days) || 100; // Default to 100 days if not provided
+      const duration = Number(duration_days) || 100;
       const installment = daily_installment ? Number(daily_installment) : (calculatedTotal / duration);
 
-      // 2. Insert customer
+      // 1. Insert customer
       const custResult = await db.execute({
         sql: 'INSERT INTO customers (name, phone, address, nic) VALUES (?, ?, ?, ?)',
         args: [name || 'Unknown', phone || '', address || '', nic || '']
       });
       const customerId = Number(custResult.lastInsertRowid);
 
-      // 3. Create Loan
+      // 2. Create Loan
       await db.execute({
         sql: `INSERT INTO loans (
                 customer_id, guarantor, principal_amount, interest_amount, 
@@ -130,13 +138,11 @@ module.exports = (db) => {
       const newBalance = Math.max(0, loan.balance - Number(amount));
       const newStatus = newBalance === 0 ? 'COMPLETED' : 'ACTIVE';
 
-      // Insert collection log
       await db.execute({
         sql: 'INSERT INTO collections (loan_id, amount) VALUES (?, ?)',
         args: [loanId, amount]
       });
 
-      // Update loan balance & status
       await db.execute({
         sql: 'UPDATE loans SET balance = ?, status = ? WHERE id = ?',
         args: [newBalance, newStatus, loanId]
