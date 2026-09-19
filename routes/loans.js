@@ -1,158 +1,139 @@
-// routes/loans.js - Robust Loan Management & Collection Routes
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const verifyToken = require('../middleware/auth');
+const db = require("../config/db"); // Config folder se DB path
 
-module.exports = (db) => {
-  // Initialize Database Tables safely
-  const initTables = async () => {
-    try {
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS customers (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          phone TEXT,
-          address TEXT,
-          nic TEXT
-        )
-      `);
+// Database Tables Initialize karne ka function
+async function initTables() {
+  try {
+    // Loans Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS loans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        nic TEXT,
+        phone TEXT,
+        guarantor_name TEXT,
+        amount REAL NOT NULL,
+        interest REAL NOT NULL,
+        paid_amount REAL DEFAULT 0,
+        paid_days INTEGER DEFAULT 0,
+        days INTEGER DEFAULT 65,
+        start_date TEXT
+      );
+    `);
 
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS loans (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          customer_id INTEGER,
-          guarantor TEXT,
-          principal_amount REAL,
-          interest_amount REAL,
-          total_amount REAL NOT NULL,
-          daily_installment REAL NOT NULL,
-          duration_days INTEGER NOT NULL,
-          balance REAL NOT NULL,
-          status TEXT DEFAULT 'ACTIVE',
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(customer_id) REFERENCES customers(id)
-        )
-      `);
+    // Loan Schedule Table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS loan_schedule (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        loan_id INTEGER,
+        day_number INTEGER,
+        amount_paid REAL DEFAULT 0,
+        status TEXT DEFAULT 'Pending',
+        FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
+      );
+    `);
 
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS collections (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          loan_id INTEGER,
-          amount REAL NOT NULL,
-          collected_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(loan_id) REFERENCES loans(id)
-        )
-      `);
-    } catch (err) {
-      console.error("Table initialization error:", err);
+    console.log("Turso Database tables successfully initialized!");
+  } catch (error) {
+    console.error("Table initialization error:", error);
+  }
+}
+
+// Module load hote hi tables initialize honge
+initTables();
+
+// 1. Get All Active Loans
+router.get("/", async (req, res) => {
+  try {
+    const result = await db.execute("SELECT * FROM loans ORDER BY id DESC");
+    const loans = result.rows;
+
+    for (let loan of loans) {
+      const schedResult = await db.execute({
+        sql: "SELECT * FROM loan_schedule WHERE loan_id = ? ORDER BY day_number ASC",
+        args: [loan.id]
+      });
+      loan.schedule = schedResult.rows;
     }
-  };
 
-  initTables();
+    res.json(loans);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  // Get all active loans & customer data
-  router.get('/', verifyToken, async (req, res) => {
-    try {
-      const rs = await db.execute(`
-        SELECT loans.*, customers.name as customer_name, customers.phone, customers.nic 
-        FROM loans 
-        JOIN customers ON loans.customer_id = customers.id
-      `);
-      res.json(rs.rows);
-    } catch (err) {
-      console.error("Get loans error:", err);
-      res.status(500).json({ error: err.message });
+// 2. Create New Loan (Optimized Batch Insert - Fast Output)
+router.post("/", async (req, res) => {
+  try {
+    const { start_date, name, nic, phone, guarantor_name, amount, interest } = req.body;
+    
+    // Main Loan Insert
+    const insertResult = await db.execute({
+      sql: `INSERT INTO loans (name, nic, phone, guarantor_name, amount, interest, start_date) 
+            VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      args: [name, nic, phone, guarantor_name, parseFloat(amount), parseFloat(interest), start_date]
+    });
+
+    const loanId = insertResult.rows[0].id;
+
+    // 65 Days ka Schedule Single Batch Query se insert karna (No Loop Delay)
+    let values = [];
+    let args = [];
+    for (let day = 1; day <= 65; day++) {
+      values.push("(?, ?, 0, 'Pending')");
+      args.push(loanId, day);
     }
-  });
 
-  // Create a new loan and customer
-  router.post('/', verifyToken, async (req, res) => {
-    const { 
-      name, 
-      phone, 
-      address, 
-      nic, 
-      guarantor, 
-      principal_amount, 
-      interest_amount, 
-      total_amount, 
-      daily_installment, 
-      duration_days 
-    } = req.body;
+    const batchSql = `INSERT INTO loan_schedule (loan_id, day_number, amount_paid, status) VALUES ${values.join(", ")}`;
+    await db.execute({ sql: batchSql, args: args });
 
-    try {
-      const principal = Number(principal_amount) || 0;
-      const interest = Number(interest_amount) || 0;
-      const calculatedTotal = total_amount ? Number(total_amount) : (principal + interest);
-      const duration = Number(duration_days) || 100;
-      const installment = daily_installment ? Number(daily_installment) : (calculatedTotal / duration);
+    res.json({ success: true, loanId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-      // 1. Insert customer
-      const custResult = await db.execute({
-        sql: 'INSERT INTO customers (name, phone, address, nic) VALUES (?, ?, ?, ?)',
-        args: [name || 'Unknown', phone || '', address || '', nic || '']
-      });
-      const customerId = Number(custResult.lastInsertRowid);
+// 3. Get Single Loan Details
+router.get("/:id", async (req, res) => {
+  try {
+    const loanResult = await db.execute({
+      sql: "SELECT * FROM loans WHERE id = ?",
+      args: [req.params.id]
+    });
 
-      // 2. Create Loan
-      await db.execute({
-        sql: `INSERT INTO loans (
-                customer_id, guarantor, principal_amount, interest_amount, 
-                total_amount, daily_installment, duration_days, balance
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          customerId, 
-          guarantor || '', 
-          principal, 
-          interest, 
-          calculatedTotal, 
-          installment, 
-          duration, 
-          calculatedTotal
-        ]
-      });
-
-      res.status(201).json({ message: 'Loan created successfully' });
-    } catch (err) {
-      console.error("Loan creation error:", err);
-      res.status(500).json({ error: err.message });
+    if (loanResult.rows.length === 0) {
+      return res.status(404).json({ error: "Loan not found" });
     }
-  });
 
-  // Record a daily payment collection
-  router.post('/:id/collect', verifyToken, async (req, res) => {
-    const loanId = req.params.id;
-    const { amount } = req.body;
+    const loan = loanResult.rows[0];
+    const schedResult = await db.execute({
+      sql: "SELECT * FROM loan_schedule WHERE loan_id = ? ORDER BY day_number ASC",
+      args: [req.params.id]
+    });
+    
+    loan.schedule = schedResult.rows;
+    res.json(loan);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    try {
-      const loanRs = await db.execute({
-        sql: 'SELECT * FROM loans WHERE id = ?',
-        args: [loanId]
-      });
+// 4. Delete Loan
+router.delete("/:id", async (req, res) => {
+  try {
+    await db.execute({
+      sql: "DELETE FROM loan_schedule WHERE loan_id = ?",
+      args: [req.params.id]
+    });
+    await db.execute({
+      sql: "DELETE FROM loans WHERE id = ?",
+      args: [req.params.id]
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-      if (loanRs.rows.length === 0) {
-        return res.status(404).json({ error: 'Loan not found' });
-      }
-
-      const loan = loanRs.rows[0];
-      const newBalance = Math.max(0, loan.balance - Number(amount));
-      const newStatus = newBalance === 0 ? 'COMPLETED' : 'ACTIVE';
-
-      await db.execute({
-        sql: 'INSERT INTO collections (loan_id, amount) VALUES (?, ?)',
-        args: [loanId, amount]
-      });
-
-      await db.execute({
-        sql: 'UPDATE loans SET balance = ?, status = ? WHERE id = ?',
-        args: [newBalance, newStatus, loanId]
-      });
-
-      res.json({ message: 'Collection recorded successfully', newBalance, status: newStatus });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  return router;
-};
+module.exports = router;
