@@ -131,7 +131,7 @@
           </div>
         </div>
 
-        <!-- Overview Cards (Now 5 Cards with Today's Collection) -->
+        <!-- Overview Cards -->
         <div class="row g-3 mb-4">
           <div class="col-md">
             <div class="card p-3 stat-card-1">
@@ -309,7 +309,11 @@
         };
         const res = await fetch('/api/loans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await res.json();
-        if(data.success) location.reload();
+        if(data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('issueLoanModal')).hide();
+          document.getElementById('issueLoanForm').reset();
+          fetchLoans();
+        }
       });
     });
 
@@ -338,15 +342,16 @@
         totalIssuedSum += total;
         totalCollectedSum += paid;
 
-        // Calculate today's collection from schedule if available
+        // Calculate today's collection
         if (loan.schedule) {
           let startDate = loan.start_date ? new Date(loan.start_date) : new Date();
           loan.schedule.forEach((day, dIdx) => {
             let currDate = new Date(startDate);
             currDate.setDate(startDate.getDate() + dIdx);
             let dateStr = currDate.toISOString().split('T')[0];
-            if (dateStr === todayStr && day.status === 'Paid') {
-              todayCollectedSum += parseFloat(day.amountPaid || 0);
+            const amountPaidVal = parseFloat(day.amountPaid || day.amount_paid || 0);
+            if (dateStr === todayStr && (day.status === 'Paid' || amountPaidVal > 0)) {
+              todayCollectedSum += amountPaidVal;
             }
           });
         }
@@ -428,23 +433,28 @@
         const interest = parseFloat(loan.interest || 0);
         const totalAmount = principal + interest;
         const paidAmount = parseFloat(loan.paid_amount || 0);
-        const dailyInstallment = totalAmount / (loan.days || 65);
+        const totalDays = loan.days || 65;
+        const dailyInstallment = totalAmount / totalDays;
 
-        document.getElementById('modalCustomerName').innerText = `${loan.name} - දින ${loan.days || 65} ණය කාඩ්පත (මූලික: රු.${principal.toFixed(2)} + පොළිය: රු.${interest.toFixed(2)})`;
+        document.getElementById('modalCustomerName').innerText = `${loan.name} - දින ${totalDays} ණය කාඩ්පත (මූලික: රු.${principal.toFixed(2)} + පොළිය: රු.${interest.toFixed(2)})`;
         document.getElementById('modalTotalLoan').innerText = `රු. ${totalAmount.toFixed(2)}`;
         document.getElementById('modalPaid').innerText = `රු. ${paidAmount.toFixed(2)}`;
-        document.getElementById('modalRemaining').innerText = `රු. ${(totalAmount - paidAmount).toFixed(2)}`;
-        document.getElementById('modalDays').innerText = `${loan.paid_days || 0} / ${loan.days || 65}`;
+        document.getElementById('modalRemaining').innerText = `රු. ${Math.max(0, totalAmount - paidAmount).toFixed(2)}`;
+        document.getElementById('modalDays').innerText = `${loan.paid_days || 0} / ${totalDays}`;
 
         const gridContainer = document.getElementById('daysGridContainer');
         gridContainer.innerHTML = '';
         let startDate = loan.start_date ? new Date(loan.start_date) : new Date();
 
         loan.schedule.forEach((day, index) => {
+          const dayNum = day.dayNumber || day.day_number || (index + 1);
           let currDate = new Date(startDate);
           currDate.setDate(startDate.getDate() + index);
           let dateStr = currDate.toISOString().split('T')[0];
-          const isPaid = day.status === 'Paid';
+
+          const amtPaid = parseFloat(day.amountPaid || day.amount_paid || 0);
+          const isPaid = day.status === 'Paid' || amtPaid >= (dailyInstallment - 0.01);
+
           const cardBg = isPaid ? '#f0fdf4' : '#fef2f2';
           const cardBorder = isPaid ? '#bbf7d0' : '#fecaca';
 
@@ -452,33 +462,54 @@
             <div class="col-md-4">
               <div class="card p-3 shadow-sm" style="background-color: ${cardBg}; border: 1px solid ${cardBorder} !important; border-radius: 10px;">
                 <div class="d-flex justify-content-between mb-2 align-items-center">
-                  <span class="fw-bold text-dark small">${day.dayNumber}) ${dateStr}</span>
-                  <span class="badge ${isPaid ? 'bg-success' : 'bg-danger'} px-2 py-1">${day.status}</span>
+                  <span class="fw-bold text-dark small">දින ${dayNum}) ${dateStr}</span>
+                  <span class="badge ${isPaid ? 'bg-success' : 'bg-danger'} px-2 py-1">${isPaid ? 'Paid' : 'Pending'}</span>
                 </div>
                 <small class="text-muted mb-2 fw-semibold" style="font-size: 0.8rem;">වාරිකය: රු. ${dailyInstallment.toFixed(2)}</small>
                 <div class="input-group input-group-sm mb-2">
                   <span class="input-group-text bg-white border-end-0 text-muted">රු.</span>
-                  <input type="number" id="input_val_${loan.id}_${day.dayNumber}" class="form-control border-start-0 ps-0" value="${parseFloat(day.amountPaid) > 0 ? day.amountPaid : dailyInstallment.toFixed(2)}">
-                  <button class="btn btn-dark btn-sm fw-semibold" onclick="sendPayment(${loan.id}, ${day.dayNumber})">Save</button>
+                  <input type="number" id="input_val_${loan.id}_${dayNum}" ${isPaid ? 'disabled' : ''} class="form-control border-start-0 ps-0" value="${amtPaid > 0 ? amtPaid : dailyInstallment.toFixed(2)}">
+                  <button class="btn btn-dark btn-sm fw-semibold" ${isPaid ? 'disabled' : ''} onclick="sendPayment(${loan.id}, ${dayNum})">Save</button>
                 </div>
-                <button class="btn btn-success btn-sm w-100 fw-semibold shadow-sm" onclick="sendPayment(${loan.id}, ${day.dayNumber}, ${dailyInstallment})">✓ Full Pay</button>
+                <button class="btn btn-success btn-sm w-100 fw-semibold shadow-sm" ${isPaid ? 'disabled' : ''} onclick="sendPayment(${loan.id}, ${dayNum}, ${dailyInstallment})">✓ Full Pay</button>
               </div>
             </div>`;
         });
+        
         cardModalInstance.show();
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error("Card load error:", err); }
     }
 
     async function sendPayment(loanId, dayNumber, customAmount = null) {
-      const amount = customAmount !== null ? customAmount : parseFloat(document.getElementById(`input_val_${loanId}_${dayNumber}`).value);
-      const res = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loan_id: loanId, day_number: dayNumber, amount_paid: amount })
-      });
-      if (res.ok) {
-        viewCard(loanId);
-        fetchLoans();
+      let amount = customAmount;
+      if (amount === null) {
+        const inputEl = document.getElementById(`input_val_${loanId}_${dayNumber}`);
+        amount = inputEl ? parseFloat(inputEl.value) : 0;
+      }
+
+      if (isNaN(amount) || amount <= 0) {
+        alert("කරුණාකර නිවැරදි මුදලක් ඇතුළත් කරන්න.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ loan_id: loanId, day_number: dayNumber, amount_paid: amount })
+        });
+        
+        if (res.ok) {
+          // Live Data Refresh without closing modal
+          await viewCard(loanId);
+          fetchLoans();
+        } else {
+          const errData = await res.json();
+          alert("Payment Save Error: " + (errData.error || "ගෙවීම සටහන් කිරීමට නොහැකි විය."));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server එකට සම්බන්ධ වීමට නොහැකි විය.");
       }
     }
 
