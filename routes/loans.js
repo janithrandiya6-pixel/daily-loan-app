@@ -5,7 +5,6 @@ const db = require("../config/db");
 // Database Tables Initialize කරන Function එක
 async function initTables() {
   try {
-    // 1. Loans Table එක සාදන්න
     await db.execute(`
       CREATE TABLE IF NOT EXISTS loans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,20 +21,10 @@ async function initTables() {
       );
     `);
 
-    // 🛠️ පැරණි Table එකට paid_amount Column එක නැත්නම් එකතු කිරීම (Fix for error)
-    try {
-      await db.execute(`ALTER TABLE loans ADD COLUMN paid_amount REAL DEFAULT 0;`);
-    } catch (e) {
-      // Column එක කලින්ම තිබේ නම් එන Error එක ignore කරයි
-    }
+    // Column Migration Checks
+    try { await db.execute(`ALTER TABLE loans ADD COLUMN paid_amount REAL DEFAULT 0;`); } catch (e) {}
+    try { await db.execute(`ALTER TABLE loans ADD COLUMN paid_days INTEGER DEFAULT 0;`); } catch (e) {}
 
-    try {
-      await db.execute(`ALTER TABLE loans ADD COLUMN paid_days INTEGER DEFAULT 0;`);
-    } catch (e) {
-      // Ignore
-    }
-
-    // 2. Payments / Schedule Table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,26 +44,46 @@ async function initTables() {
 
 initTables();
 
-// 🚀 1. Get All Active Loans
+// 🚀 1. Get All Active Loans (Calculates exact paid amounts dynamically)
 router.get("/", async (req, res) => {
   try {
-    const loansRes = await db.execute(`
-      SELECT 
-        l.*, 
-        COALESCE(SUM(p.amount_paid), 0) AS paid_amount 
-      FROM loans l
-      LEFT JOIN payments p ON l.id = p.loan_id
-      GROUP BY l.id
-      ORDER BY l.id DESC
-    `);
-    res.json(loansRes.rows);
+    const loansRes = await db.execute("SELECT * FROM loans ORDER BY id DESC");
+    const loans = loansRes.rows || [];
+
+    for (let loan of loans) {
+      const paymentsRes = await db.execute({
+        sql: "SELECT * FROM payments WHERE loan_id = ?",
+        args: [loan.id]
+      });
+
+      let totalPaid = 0;
+      let completedDays = 0;
+      const totalDays = loan.days || 65;
+      const totalAmount = parseFloat(loan.amount || 0) + parseFloat(loan.interest || 0);
+      const dailyInstallment = totalDays > 0 ? totalAmount / totalDays : 0;
+
+      if (paymentsRes.rows) {
+        paymentsRes.rows.forEach(p => {
+          const amt = parseFloat(p.amount_paid || 0);
+          totalPaid += amt;
+          if (amt >= (dailyInstallment - 0.01) && dailyInstallment > 0) {
+            completedDays++;
+          }
+        });
+      }
+
+      loan.paid_amount = totalPaid;
+      loan.paid_days = completedDays;
+    }
+
+    res.json(loans);
   } catch (err) {
     console.error("Error fetching loans:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 🚀 2. Create New Loan (Safely without schema errors)
+// 🚀 2. Create New Loan
 router.post("/", async (req, res) => {
   try {
     const { start_date, name, nic, phone, guarantor_name, amount, interest } = req.body;
@@ -88,8 +97,8 @@ router.post("/", async (req, res) => {
       : new Date().toISOString().split("T")[0];
 
     const insertResult = await db.execute({
-      sql: `INSERT INTO loans (name, nic, phone, guarantor_name, amount, interest, start_date, days) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 65)`,
+      sql: `INSERT INTO loans (name, nic, phone, guarantor_name, amount, interest, start_date, days, paid_amount, paid_days) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 65, 0, 0)`,
       args: [
         String(name),
         String(nic || ""),
@@ -102,7 +111,6 @@ router.post("/", async (req, res) => {
     });
 
     const loanId = Number(insertResult.lastInsertRowid);
-
     res.json({ success: true, loanId: loanId, message: "Loan එක සාර්ථකව නිර්මාණය විය!" });
   } catch (err) {
     console.error("Error creating loan:", err);
@@ -171,7 +179,38 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// 🚀 4. Delete Loan
+// 🚀 4. Save Payment for a Day
+router.post("/:id/pay", async (req, res) => {
+  try {
+    const loanId = req.params.id;
+    const { day_number, amount_paid } = req.body;
+
+    // Existing payment check
+    const existing = await db.execute({
+      sql: "SELECT * FROM payments WHERE loan_id = ? AND day_number = ?",
+      args: [loanId, day_number]
+    });
+
+    if (existing.rows && existing.rows.length > 0) {
+      await db.execute({
+        sql: "UPDATE payments SET amount_paid = ? WHERE loan_id = ? AND day_number = ?",
+        args: [parseFloat(amount_paid), loanId, day_number]
+      });
+    } else {
+      await db.execute({
+        sql: "INSERT INTO payments (loan_id, day_number, amount_paid, status) VALUES (?, ?, ?, 'Paid')",
+        args: [loanId, day_number, parseFloat(amount_paid)]
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error saving payment:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🚀 5. Delete Loan
 router.delete("/:id", async (req, res) => {
   try {
     const id = req.params.id;
