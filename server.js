@@ -2,11 +2,13 @@ const express = require("express");
 const app = express();
 const dotenv = require("dotenv");
 const path = require("path");
+const cors = require("cors"); // 👈 CORS එකතු කළා
 
 // dotenv Configuration
 dotenv.config();
 
 // Middleware
+app.use(cors()); // 👈 Cross-Origin Requests වලට ඉඩ දීම
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public")); // public folder static files
@@ -58,10 +60,11 @@ app.post("/api/payments", async (req, res) => {
   }
 });
 
-// Database Auto-Create & Migration Logic
+// Database Auto-Create & Migration Logic (Only runs once if needed)
+let isInitialized = false;
 async function initAnalyticsTables() {
+  if (isInitialized) return;
   try {
-    // 1. Loans Table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS loans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +80,6 @@ async function initAnalyticsTables() {
       );
     `);
 
-    // 2. Payments Table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,15 +91,10 @@ async function initAnalyticsTables() {
       );
     `);
 
-    // Schema Migration: paid_date column illaiyentral auto-add pannum
     try {
       await db.execute(`ALTER TABLE payments ADD COLUMN paid_date TEXT;`);
-      console.log("✅ 'paid_date' column added to payments table!");
-    } catch (colErr) {
-      // Column munnadiye irundhal error-ai ignore pannum
-    }
+    } catch (colErr) {}
 
-    // 3. Capital Table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS capital (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,7 +105,6 @@ async function initAnalyticsTables() {
       );
     `);
 
-    // 4. Expenses Table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS expenses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,13 +114,14 @@ async function initAnalyticsTables() {
       );
     `);
 
+    isInitialized = true;
     console.log("✅ All Database Tables & Columns are Ready!");
   } catch (error) {
     console.error("❌ Error initializing database tables:", error);
   }
 }
 
-// Init Database Tables
+// Init Database Tables safely
 initAnalyticsTables();
 
 // Server Setup

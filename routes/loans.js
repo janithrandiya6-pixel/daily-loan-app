@@ -2,81 +2,36 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 
-// Database Tables Initialize කරන Function එක
-async function initTables() {
-  try {
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS loans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        nic TEXT,
-        phone TEXT,
-        guarantor_name TEXT,
-        amount REAL NOT NULL,
-        interest REAL NOT NULL,
-        paid_amount REAL DEFAULT 0,
-        paid_days INTEGER DEFAULT 0,
-        days INTEGER DEFAULT 65,
-        start_date TEXT
-      );
-    `);
-
-    // Column Migration Checks
-    try { await db.execute(`ALTER TABLE loans ADD COLUMN paid_amount REAL DEFAULT 0;`); } catch (e) {}
-    try { await db.execute(`ALTER TABLE loans ADD COLUMN paid_days INTEGER DEFAULT 0;`); } catch (e) {}
-
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS payments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        loan_id INTEGER,
-        day_number INTEGER,
-        amount_paid REAL DEFAULT 0,
-        status TEXT DEFAULT 'Pending',
-        FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
-      );
-    `);
-
-    console.log("Turso Database tables successfully initialized & fixed!");
-  } catch (error) {
-    console.error("Table initialization error:", error);
-  }
-}
-
-initTables();
-
-// 🚀 1. Get All Active Loans (Calculates exact paid amounts dynamically)
+// 🚀 1. Get All Active Loans (Fixed Paid Amount & Speed Optimization)
 router.get("/", async (req, res) => {
   try {
-    const loansRes = await db.execute("SELECT * FROM loans ORDER BY id DESC");
-    const loans = loansRes.rows || [];
+    const loansRes = await db.execute(`
+      SELECT 
+        l.id,
+        l.name,
+        l.nic,
+        l.phone,
+        l.guarantor_name,
+        l.amount,
+        l.interest,
+        l.days,
+        l.start_date,
+        COALESCE(SUM(p.amount_paid), 0) AS paid_amount
+      FROM loans l
+      LEFT JOIN payments p ON l.id = p.loan_id
+      GROUP BY l.id
+      ORDER BY l.id DESC
+    `);
 
-    for (let loan of loans) {
-      const paymentsRes = await db.execute({
-        sql: "SELECT * FROM payments WHERE loan_id = ?",
-        args: [loan.id]
-      });
+    // Front-end එකට අවශ්‍ය Format එකට Mapping කිරීම
+    const formattedLoans = (loansRes.rows || []).map(loan => ({
+      ...loan,
+      amount: parseFloat(loan.amount || 0),
+      interest: parseFloat(loan.interest || 0),
+      paid_amount: parseFloat(loan.paid_amount || 0)
+    }));
 
-      let totalPaid = 0;
-      let completedDays = 0;
-      const totalDays = loan.days || 65;
-      const totalAmount = parseFloat(loan.amount || 0) + parseFloat(loan.interest || 0);
-      const dailyInstallment = totalDays > 0 ? totalAmount / totalDays : 0;
-
-      if (paymentsRes.rows) {
-        paymentsRes.rows.forEach(p => {
-          const amt = parseFloat(p.amount_paid || 0);
-          totalPaid += amt;
-          if (amt >= (dailyInstallment - 0.01) && dailyInstallment > 0) {
-            completedDays++;
-          }
-        });
-      }
-
-      loan.paid_amount = totalPaid;
-      loan.paid_days = completedDays;
-    }
-
-    res.json(loans);
+    res.json(formattedLoans);
   } catch (err) {
     console.error("Error fetching loans:", err);
     res.status(500).json({ error: err.message });
@@ -118,7 +73,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 🚀 3. Get Single Loan Details with 65-day Schedule
+// 🚀 3. Get Single Loan Details with Schedule
 router.get("/:id", async (req, res) => {
   try {
     const loanId = req.params.id;
@@ -179,13 +134,13 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// 🚀 4. Save Payment for a Day
+// 🚀 4. Save Payment
 router.post("/:id/pay", async (req, res) => {
   try {
     const loanId = req.params.id;
     const { day_number, amount_paid } = req.body;
+    const today = new Date().toISOString().split("T")[0];
 
-    // Existing payment check
     const existing = await db.execute({
       sql: "SELECT * FROM payments WHERE loan_id = ? AND day_number = ?",
       args: [loanId, day_number]
@@ -193,13 +148,13 @@ router.post("/:id/pay", async (req, res) => {
 
     if (existing.rows && existing.rows.length > 0) {
       await db.execute({
-        sql: "UPDATE payments SET amount_paid = ? WHERE loan_id = ? AND day_number = ?",
-        args: [parseFloat(amount_paid), loanId, day_number]
+        sql: "UPDATE payments SET amount_paid = ?, paid_date = ? WHERE loan_id = ? AND day_number = ?",
+        args: [parseFloat(amount_paid), today, loanId, day_number]
       });
     } else {
       await db.execute({
-        sql: "INSERT INTO payments (loan_id, day_number, amount_paid, status) VALUES (?, ?, ?, 'Paid')",
-        args: [loanId, day_number, parseFloat(amount_paid)]
+        sql: "INSERT INTO payments (loan_id, day_number, amount_paid, paid_date, status) VALUES (?, ?, ?, ?, 'Paid')",
+        args: [loanId, day_number, parseFloat(amount_paid), today]
       });
     }
 
