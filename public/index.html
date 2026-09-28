@@ -273,10 +273,38 @@
           </div>
         </div>
         <div class="modal-body">
+          <!-- Top Stat Boxes Including Paid & Remaining Days -->
           <div class="row text-center g-3 mb-4">
-            <div class="col-md-4"><div class="p-2.5 bg-light rounded-3 border"><small class="text-muted fw-semibold">මුළු ණය මුදල</small><br><strong id="modalTotalLoan" class="fs-6 text-dark">රු. 0.00</strong></div></div>
-            <div class="col-md-4"><div class="p-2.5 bg-light rounded-3 border"><small class="text-muted fw-semibold">ලබාගත් මුළු මුදල (Paid)</small><br><strong id="modalPaid" class="text-success fs-6">රු. 0.00</strong></div></div>
-            <div class="col-md-4"><div class="p-2.5 bg-light rounded-3 border"><small class="text-muted fw-semibold">ලැබීමට ඇති (Remaining)</small><br><strong id="modalRemaining" class="text-danger fs-6">රු. 0.00</strong></div></div>
+            <div class="col-md-2.4 col-sm-6" style="flex: 0 0 auto; width: 20%;">
+              <div class="p-2.5 bg-light rounded-3 border">
+                <small class="text-muted fw-semibold">මුළු ණය මුදල</small><br>
+                <strong id="modalTotalLoan" class="fs-6 text-dark">රු. 0.00</strong>
+              </div>
+            </div>
+            <div class="col-md-2.4 col-sm-6" style="flex: 0 0 auto; width: 20%;">
+              <div class="p-2.5 bg-light rounded-3 border">
+                <small class="text-muted fw-semibold">ලබාගත් මුළු මුදල (Paid)</small><br>
+                <strong id="modalPaid" class="text-success fs-6">රු. 0.00</strong>
+              </div>
+            </div>
+            <div class="col-md-2.4 col-sm-6" style="flex: 0 0 auto; width: 20%;">
+              <div class="p-2.5 bg-light rounded-3 border">
+                <small class="text-muted fw-semibold">ලැබීමට ඇති (Remaining)</small><br>
+                <strong id="modalRemaining" class="text-danger fs-6">රු. 0.00</strong>
+              </div>
+            </div>
+            <div class="col-md-2.4 col-sm-6" style="flex: 0 0 auto; width: 20%;">
+              <div class="p-2.5 bg-light rounded-3 border border-success-subtle">
+                <small class="text-muted fw-semibold">ගෙවා ඇති දින</small><br>
+                <strong id="modalPaidDays" class="text-success fs-6">0 / 65</strong>
+              </div>
+            </div>
+            <div class="col-md-2.4 col-sm-6" style="flex: 0 0 auto; width: 20%;">
+              <div class="p-2.5 bg-light rounded-3 border border-warning-subtle">
+                <small class="text-muted fw-semibold">ගෙවීමට ඇති දින</small><br>
+                <strong id="modalRemainingDays" class="text-warning-emphasis fs-6">65 දින</strong>
+              </div>
+            </div>
           </div>
           <div id="daysGridContainer" class="row g-3" style="max-height: 520px; overflow-y: auto;"></div>
         </div>
@@ -516,6 +544,21 @@
         document.getElementById('modalTotalLoan').innerText = `රු. ${totalAmount.toFixed(2)}`;
         document.getElementById('modalPaid').innerText = `රු. ${paidAmount.toFixed(2)}`;
         document.getElementById('modalRemaining').innerText = `රු. ${Math.max(0, totalAmount - paidAmount).toFixed(2)}`;
+
+        // Calculate Paid and Remaining Days dynamically
+        let paidDaysCount = 0;
+        if (loan.schedule) {
+          loan.schedule.forEach((day) => {
+            const amtPaid = parseFloat(day.amountPaid || day.amount_paid || 0);
+            if (day.status === 'Paid' || amtPaid >= (dailyInstallment - 0.01)) {
+              paidDaysCount++;
+            }
+          });
+        }
+        const remainingDaysCount = totalDays - paidDaysCount;
+
+        document.getElementById('modalPaidDays').innerText = `${paidDaysCount} / ${totalDays}`;
+        document.getElementById('modalRemainingDays').innerText = `${remainingDaysCount} දින`;
 
         const gridContainer = document.getElementById('daysGridContainer');
         gridContainer.innerHTML = '';
